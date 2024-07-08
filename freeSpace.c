@@ -28,9 +28,31 @@ int initFreeSpace(uint64_t numberOfBlocks, uint64_t blockSize) {
 }
 
 int getFreeBlocks(uint64_t numberOfBlocks) {
+    // TO DO: Input handling
+
+    int head = VCB->freeSpaceLocation;
+    int currentBlock = VCB->freeSpaceLocation;
+    int nextBlock = FAT[currentBlock];
+    // derement total free space because head block
+    VCB->totalFreeSpace--;
+
+    for (int i = 1; i < numberOfBlocks; )
+
 
 }
 
 int writeBlock(uint64_t numberOfBlocks, void * buffer, int location) {
+    // TO DO: Input handling
 
+    int blockSize = VCB->blockSize;
+    int blocksWritten = 0;
+    for (int i = 0; i < numberOfBlocks; i++) {
+        if (LBAwrite(buffer + blockSize * blockWritten, 1, location) == -1) {
+            return -1;
+        }
+        location = FAT[location];
+        blocksWritten++;
+    }
+
+    return blocksWritten;
 }
