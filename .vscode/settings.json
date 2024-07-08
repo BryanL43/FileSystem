@@ -1,7 +1,8 @@
 {
     "C_Cpp.errorSquiggles": "disabled",
-    "editor.formatOnSave": true,
     "files.associations": {
-        "freeSpace.C": "cpp"
+        "freeSpace.C": "cpp",
+        "unistd.h": "c",
+        "stdlib.h": "c"
     }
 }

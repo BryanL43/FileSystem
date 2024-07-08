@@ -1,5 +1,3 @@
-#include "Directory.h"
-
 DirectoryEntry *initDirectory(int minEntries, DirectoryEntry *parent)
 {
     int bytesNeeded = minEntries * sizeof(DirectoryEntry);
