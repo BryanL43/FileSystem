@@ -1,19 +1,19 @@
-#include "Directory.h"
+#include "fsDesign.h"
+#include "fsLow.h"
 
 DirectoryEntry *initDirectory(int minEntries, DirectoryEntry *parent)
 {
     int bytesNeeded = minEntries * sizeof(DirectoryEntry);
-    int blocksNeeded = (bytesNeeded + BLOCKSIZE - 1) / BLOCKSIZE;
-    int bytesToALloc = bytesNeeded * BLOCKSIZE;
-    DirectoryEntry *DEs = malloc(bytesToALloc);
+    int blocksNeeded = (bytesNeeded + MINBLOCKSIZE - 1) / MINBLOCKSIZE;
+    int bytesToAlloc = bytesNeeded * MINBLOCKSIZE;
 
-    if (DEs == NULL)
-    {
-        // Handle memory allocation failure
+    DirectoryEntry *DEs = malloc(bytesToAlloc);
+    if (DEs == NULL) {
         return NULL;
     }
 
-    int actualEntries = bytesToALloc / sizeof(DirectoryEntry);
+    int actualEntries = bytesToAlloc / sizeof(DirectoryEntry);
+    
     // TODO: init all the actual entries
     for(int i = 2; i < actualEntries; i++) {
         time_t currentTime = time(NULL);
