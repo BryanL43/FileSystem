@@ -40,13 +40,6 @@ int initFileSystem(uint64_t numberOfBlocks, uint64_t blockSize)
 		return -1;
 	}
 
-	//Instantiate root directory
-	DirectoryEntry* root = malloc(sizeof(DirectoryEntry));
-	if (root == NULL) {
-		printf("Failed to instantiate root directory!\n");
-		return -1;
-	}
-
 	LBAread(vcb, 1, 0);
 
 	if (vcb->signature == SIGNATURE)
