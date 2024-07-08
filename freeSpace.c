@@ -1,55 +1,53 @@
 #include "freeSpace.h"
 #include "fsDesign.h"
+#include "fsLow.h"
 
 int initFreeSpace(uint64_t numberOfBlocks, uint64_t blockSize) {
-    int blocksNeeded = (numberOfBlocks + blockSize -1)/blockSize;
+    int blocksNeeded = (numberOfBlocks + blockSize -1) / blockSize;
     int *FAT = malloc(blocksNeeded*blockSize);
 
-    FAT[0] = 0xFFFFFFFF;
+    FAT[0] = 0xFFFFFFFD;
     for (int i = 1; i < numberOfBlocks; i++) {
         FAT[i] = i+1;
     }
 
     // Sentinel value for FAT storage
-    FAT(blocksNeeded) = 0xFFFFFFFF;
+    FAT[blocksNeeded] = 0xFFFFFFFD;
 
     // Sentinel value for free space storage 
-    FAT(numberOfBlocks) = 0xFFFFFFFF
+    FAT[numberOfBlocks] = 0xFFFFFFFD;
 
     int blocksWritten = LBAwrite(FAT, blocksNeeded, 1);
-    // TO DO: Update VCB values after initializing VCB
+    // TO DO: Update vcb values after initializing vcb
+    vcb -> totalFreeSpace = numberOfBlocks - blocksNeeded;
+    vcb -> freeSpaceLocation = 1;
 
-    if (blocksWritten == -1) {
-        return -1;
-    } else {
-        return blocksNeeded + 1; // index at the end of FAT block + 1
-    }
-
+    return (blocksWritten == -1) ? -1 : blocksNeeded + 1; // Index at the end of FAT block + 1
 }
 
 int getFreeBlocks(uint64_t numberOfBlocks) {
     // TO DO: Input handling
 
-    int head = VCB->freeSpaceLocation;
-    int currentBlock = VCB->freeSpaceLocation;
+    int head = vcb->freeSpaceLocation;
+    int currentBlock = vcb->freeSpaceLocation;
     int nextBlock = FAT[currentBlock];
     // derement total free space because head block
-    VCB->totalFreeSpace--;
+    vcb->totalFreeSpace--;
 
     for( int i = 1; i < numberOfBlocks; i ++ ) {
-        currBlockLoc = nextBlockLoc;
-        nextBlockLoc = fat[currBlockLoc];
+        currentBlock = nextBlockLoc; //Careful with this part will look later
+        nextBlock = fat[currBlockLoc];
         volumeControlBlock->totalFreeSpace--;
     }
-    fat[currentBlock] = 0xFFFFFFFF;
-    volumeControlBlock->freeSpaceLocation= nextBlock;
+    fat[currentBlock] = 0xFFFFFFFD;
+    volumeControlBlock->freeSpaceLocation = nextBlock;
     return head;
 }
 
 int writeBlock(uint64_t numberOfBlocks, void * buffer, int location) {
     // TO DO: Input handling
 
-    int blockSize = VCB->blockSize;
+    int blockSize = vcb->blockSize;
     int blocksWritten = 0;
     for (int i = 0; i < numberOfBlocks; i++) {
         if (LBAwrite(buffer + blockSize * blockWritten, 1, location) == -1) {
