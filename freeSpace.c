@@ -8,3 +8,11 @@ int initFreeSpace(uint64_t numberOfBlocks, uint64_t blockSize) {
 
     return 0;
 }
+
+int getFreeBlocks(uint64_t numberOfBlocks) {
+    
+}
+
+int writeBlock(uint64_t numberOfBlocks, void * buffer, int location) {
+
+}
