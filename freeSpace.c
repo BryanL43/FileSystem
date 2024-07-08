@@ -36,9 +36,14 @@ int getFreeBlocks(uint64_t numberOfBlocks) {
     // derement total free space because head block
     VCB->totalFreeSpace--;
 
-    for (int i = 1; i < numberOfBlocks; )
-
-
+    for( int i = 1; i < numberOfBlocks; i ++ ) {
+        currBlockLoc = nextBlockLoc;
+        nextBlockLoc = fat[currBlockLoc];
+        volumeControlBlock->totalFreeSpace--;
+    }
+    fat[currentBlock] = 0xFFFFFFFF;
+    volumeControlBlock->freeSpaceLocation= nextBlock;
+    return head;
 }
 
 int writeBlock(uint64_t numberOfBlocks, void * buffer, int location) {
