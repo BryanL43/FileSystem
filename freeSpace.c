@@ -3,8 +3,8 @@
 #include "fsLow.h"
 
 int initFreeSpace(uint64_t numberOfBlocks, uint64_t blockSize) {
-    int blocksNeeded = (numberOfBlocks + blockSize -1) / blockSize;
-    int *FAT = malloc(blocksNeeded*blockSize);
+    int bytesNeeded = numberOfBlocks * sizeof(int)
+    int blocksNeeded = (bytesNeeded + blockSize - 1) / blockSize;
 
     FAT[0] = 0xFFFFFFFD;
     for (int i = 1; i < numberOfBlocks; i++) {

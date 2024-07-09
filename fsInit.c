@@ -22,21 +22,32 @@
 
 #include "freeSpace.h"
 #include "fsDesign.h"
+#include "directory.c"
 #include "fsLow.h"
 #include "mfs.h"
 
 #define SIGNATURE 7263366117696533168
 
+// Global variables to use between files
+struct VCB * vcb;
+int * FAT;
+
 int initFileSystem(uint64_t numberOfBlocks, uint64_t blockSize)
 {
 	printf("Initializing File System with %ld blocks with a block size of %ld\n", numberOfBlocks, blockSize);
 
-	int blocksNeeded = (numberOfBlocks + blockSize - 1) / blockSize;
 
 	//Instantiate a volume control block instance
-	VCB* vcb = malloc(blockSize);
+	vcb = malloc(blockSize);
 	if (vcb == NULL) {
 		printf("Failed to instantiate VCB!\n");
+		return -1;
+	}
+
+	//Instantiate a FAT instance
+	FAT = malloc(numberOfBlocks*sizeof(int));
+	if (FAT == NULL) {
+		printf("Failed to instantiate FAT!\n");
 		return -1;
 	}
 
@@ -64,13 +75,13 @@ int initFileSystem(uint64_t numberOfBlocks, uint64_t blockSize)
 		// call init free space,
 		//@parameters (vcb, or whatever else you need)
 		// return value should be int for location 
-		vcb->totalFreeSpace;
-		vcb->freeSpaceLocation = 1;
+		vcb->freeSpaceLocation = initFreeSpace(numberOfBlocks, blockSize);
+		vcb->totalFreeSpace = numberOfBlocks - vcb -> freeSpaceLocation;
 
 		//call initDirectory
 		// return value should be int for location of root directory
 		// initDirectory(vcb->blocksize, Null);
-		vcb->rootLocation;
+		vcb->rootLocation = initDirectory(50, NULL);
 
 	}
 	
