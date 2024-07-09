@@ -80,10 +80,10 @@ int initFileSystem(uint64_t numberOfBlocks, uint64_t blockSize)
 			return -1;
 		}
 
-		//call initDirectory
-		// return value should be int for location of root directory
+		// Initialize the root directory
 		DirectoryEntry* root = initDirectory(20, NULL);
 		if (root == NULL) {
+			printf("Failed to initialize the root directory!\n");
 			free(vcb);
 			free(FAT);
 			return -1;
@@ -93,6 +93,8 @@ int initFileSystem(uint64_t numberOfBlocks, uint64_t blockSize)
 
 		if (LBAwrite(vcb, 1, 0) == -1) {
 			printf("Error writing vcb!\n");
+			free(vcb);
+			free(FAT);
 			return -1;
 		}
 	}
