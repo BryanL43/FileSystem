@@ -5,6 +5,7 @@ DirectoryEntry *initDirectory(int minEntries, DirectoryEntry *parent)
 {
     int bytesNeeded = minEntries * sizeof(DirectoryEntry);
     int blocksNeeded = (bytesNeeded + vcb->blockSize - 1) / vcb->blockSize;
+    printf("Blocks needed: %d", blocksNeeded);
     int bytesToAlloc = bytesNeeded * vcb->blockSize;
 
     DirectoryEntry *DEs = malloc(bytesToAlloc);

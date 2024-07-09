@@ -24,7 +24,12 @@ int initFreeSpace(uint64_t numberOfBlocks, uint64_t blockSize) {
 
     // Initialize vcb values
     vcb->totalFreeSpace = numberOfBlocks - blocksNeeded;
-    vcb->freeSpaceLocation = blocksNeeded + 1;
+
+    // FAT table starts at block 1, right after VCB block
+    vcb->freeSpaceLocation = 1;
+
+    printf("Blocks needed: %d", blocksNeeded);
+    vcb->firstFreeBlock = blocksNeeded + 1;
     
     return (blocksWritten == -1) ? -1 : 0; //-1 fail; 0 success
 }
@@ -41,8 +46,8 @@ int getFreeBlocks(uint64_t numberOfBlocks) {
         return -1;
     }
 
-    int head = vcb->freeSpaceLocation;
-    int currentBlock = vcb->freeSpaceLocation;
+    int head = vcb->firstFreeBlock;
+    int currentBlock = vcb->firstFreeBlock;
     int nextBlock = FAT[currentBlock];
 
     // Decrement total free space for the head block
@@ -57,7 +62,7 @@ int getFreeBlocks(uint64_t numberOfBlocks) {
 
     // Break link to indicate end of requested free space
     FAT[currentBlock] = 0xFFFFFFFD;
-    vcb->freeSpaceLocation = nextBlock;
+    vcb->firstFreeBlock = nextBlock;
 
     return head;
 }
