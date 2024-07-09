@@ -13,7 +13,7 @@ typedef struct DirectoryEntry
    int size;               // directory entry size
    int location;           // starting block number for the file data
    int permissions;        // file modes converted to decimal format
-  
+
    // total size = 80, divisible by 16, and no internal paddings
 } DirectoryEntry;
 
@@ -26,6 +26,7 @@ typedef struct VCB
    int totalBlocks;        // total blocks in volume
 
    int freeSpaceLocation;  // location to free space block
+   int firstFreeBlock;     // location to the first free block
    int totalFreeSpace;     // total free blocks
 
    int rootLocation;       // location to root directory
