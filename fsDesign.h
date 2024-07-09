@@ -30,6 +30,7 @@ typedef struct VCB
    int totalFreeSpace;     // total free blocks
 
    int rootLocation;       // location to root directory
+   // total size = 32, divisible by 16
 } VCB;
 
 extern struct VCB* vcb;

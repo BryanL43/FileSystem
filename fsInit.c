@@ -35,15 +35,14 @@ int initFileSystem(uint64_t numberOfBlocks, uint64_t blockSize)
 {
 	printf("Initializing File System with %ld blocks with a block size of %ld\n", numberOfBlocks, blockSize);
 
-
-	//Instantiate a volume control block instance
+	// Instantiate a volume control block instance
 	vcb = malloc(blockSize);
 	if (vcb == NULL) {
 		printf("Failed to instantiate VCB!\n");
 		return -1;
 	}
 
-	//Instantiate a FAT instance
+	// Instantiate a FAT instance
 	FAT = malloc(numberOfBlocks * sizeof(int));
 	if (FAT == NULL) {
 		printf("Failed to instantiate FAT!\n");
@@ -72,7 +71,7 @@ int initFileSystem(uint64_t numberOfBlocks, uint64_t blockSize)
 		vcb->blockSize = blockSize;
 		vcb->totalBlocks = numberOfBlocks;
 
-		//Initalize Freespace
+		// Initalize Freespace
 		if (initFreeSpace(numberOfBlocks, blockSize) != 0) {
 			printf("Failed to initialize free space!\n");
 			free(vcb);

@@ -27,8 +27,7 @@ int initFreeSpace(uint64_t numberOfBlocks, uint64_t blockSize) {
 
     // FAT table starts at block 1, right after VCB block
     vcb->freeSpaceLocation = 1;
-
-    printf("Blocks needed: %d", blocksNeeded);
+    
     vcb->firstFreeBlock = blocksNeeded + 1;
     
     return (blocksWritten == -1) ? -1 : 0; //-1 fail; 0 success
