@@ -31,4 +31,7 @@ typedef struct VCB
    int rootLocation;       // location to root directory
 } VCB;
 
+extern struct VCB* vcb;
+extern int* FAT;
+
 #endif

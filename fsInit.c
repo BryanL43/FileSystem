@@ -28,9 +28,8 @@
 
 #define SIGNATURE 7263366117696533168
 
-// Global variables to use between files
-struct VCB * vcb;
-int * FAT;
+struct VCB* vcb;
+int* FAT;
 
 int initFileSystem(uint64_t numberOfBlocks, uint64_t blockSize)
 {
@@ -45,16 +44,16 @@ int initFileSystem(uint64_t numberOfBlocks, uint64_t blockSize)
 	}
 
 	//Instantiate a FAT instance
-	FAT = malloc(numberOfBlocks*sizeof(int));
+	FAT = malloc(numberOfBlocks * sizeof(int));
 	if (FAT == NULL) {
 		printf("Failed to instantiate FAT!\n");
+		free(vcb);
 		return -1;
 	}
 
 	LBAread(vcb, 1, 0);
 
-	if (vcb->signature == SIGNATURE)
-	{
+	if (vcb->signature == SIGNATURE) {
 		//I will do more research in this section to check what we need to do
 		//for if the signature exist 
 
@@ -68,23 +67,35 @@ int initFileSystem(uint64_t numberOfBlocks, uint64_t blockSize)
 		//@parameters(int rootlocation, or whatever else you need)
 		//no return value for now
 		
-	}else{
+	} else {
 		vcb->signature = SIGNATURE;
 		vcb->blockSize = blockSize;
 		vcb->totalBlocks = numberOfBlocks;
-		// call init free space,
-		//@parameters (vcb, or whatever else you need)
-		// return value should be int for location 
-		vcb->freeSpaceLocation = initFreeSpace(numberOfBlocks, blockSize);
-		vcb->totalFreeSpace = numberOfBlocks - vcb -> freeSpaceLocation;
+
+		//Initalize freeSpaceLocation and totalFreeSpace through pass-by-reference
+		if (initFreeSpace(numberOfBlocks, blockSize) != 0) {
+			printf("Failed to initialize free space!\n");
+			free(vcb);
+			free(FAT);
+			return -1;
+		}
 
 		//call initDirectory
 		// return value should be int for location of root directory
 		DirectoryEntry* root = initDirectory(20, NULL);
-		vcb->rootLocation = root->location; 
+		if (root == NULL) {
+			free(vcb);
+			free(FAT);
+			return -1;
+		}
 
+		vcb->rootLocation = root->location;
+
+		if (LBAwrite(vcb, 1, 0) == -1) {
+			printf("Error writing vcb!\n");
+			return -1;
+		}
 	}
-	
 
 	return 0;
 }

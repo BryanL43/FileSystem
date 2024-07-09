@@ -1,10 +1,11 @@
 #include "directory.h"
+#include <time.h>
 
 DirectoryEntry *initDirectory(int minEntries, DirectoryEntry *parent)
 {
     int bytesNeeded = minEntries * sizeof(DirectoryEntry);
-    int blocksNeeded = (bytesNeeded + MINBLOCKSIZE - 1) / MINBLOCKSIZE;
-    int bytesToAlloc = bytesNeeded * MINBLOCKSIZE;
+    int blocksNeeded = (bytesNeeded + vcb->blockSize - 1) / vcb->blockSize;
+    int bytesToAlloc = bytesNeeded * vcb->blockSize;
 
     DirectoryEntry *DEs = malloc(bytesToAlloc);
     if (DEs == NULL) {
@@ -25,9 +26,16 @@ DirectoryEntry *initDirectory(int minEntries, DirectoryEntry *parent)
         DEs[i].permissions = 0;
     }
 
-    // Initialize . and ..
+    // Get Free Space
     int newLoc = getFreeBlocks(blocksNeeded);
+    if (newLoc == -1) {
+        printf("Error: unable to get free block for directory!\n");
+        return NULL;
+    }
+
     time_t currentTime = time(NULL);
+
+    printf("Seconds since January 1, 1970 = %d\n", currentTime);
 
     // Initialize "."
     DEs[0].location = newLoc;
@@ -38,16 +46,20 @@ DirectoryEntry *initDirectory(int minEntries, DirectoryEntry *parent)
     DEs[0].dateModified = currentTime;
     DEs[0].permissions = 0;
 
+    // Initialize ".."
     DirectoryEntry *dotdot = parent;
     if (dotdot == NULL)
     {
         dotdot = &DEs[0];
     }
 
-    memcpy(&DEs[1], &DEs[0], sizeof(DirectoryEntry));
+    memcpy(&DEs[1], dotdot, sizeof(DirectoryEntry));
     strcpy(DEs[0].name, "..");
 
-    writeBlock(blocksNeeded, DEs, newLoc);
+    if (writeBlock(blocksNeeded, DEs, newLoc) == -1) {
+        printf("Error: Failed to write block for directory!\n");
+        return NULL;
+    }
 
     return DEs;
 }

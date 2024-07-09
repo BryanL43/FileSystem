@@ -5,6 +5,8 @@
 #include <unistd.h>
 #include <stdio.h>
 #include <string.h>
+
+#include "fsDesign.h"
 #include "fsLow.h"
 
 int initFreeSpace(uint64_t numberOfBlocks, uint64_t blockSize);
