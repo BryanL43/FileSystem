@@ -35,8 +35,8 @@ int getFreeBlocks(uint64_t numberOfBlocks) {
     vcb->totalFreeSpace--;
 
     for( int i = 1; i < numberOfBlocks; i ++ ) {
-        currentBlock = nextBlockLoc; //Careful with this part will look later
-        nextBlock = fat[currBlockLoc];
+        currentBlock = nextBlock; //Careful with this part will look later (Kevin looked and fixed)
+        nextBlock = fat[currentBlock];
         volumeControlBlock->totalFreeSpace--;
     }
     fat[currentBlock] = 0xFFFFFFFD;
