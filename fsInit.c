@@ -75,21 +75,27 @@ int initFileSystem(uint64_t numberOfBlocks, uint64_t blockSize)
 		//Initalize Freespace
 		if (initFreeSpace(numberOfBlocks, blockSize) != 0) {
 			printf("Failed to initialize free space!\n");
-			exitFileSystem();
+			free(vcb);
+			free(FAT);
+			return -1;
 		}
 
 		// Initialize the root directory
 		DirectoryEntry* root = initDirectory(20, NULL);
 		if (root == NULL) {
 			printf("Failed to initialize the root directory!\n");
-			exitFileSystem();
+			free(vcb);
+			free(FAT);
+			return -1;
 		}
 
 		vcb->rootLocation = root->location;
 
 		if (LBAwrite(vcb, 1, 0) == -1) {
 			printf("Error writing vcb!\n");
-			exitFileSystem();
+			free(vcb);
+			free(FAT);
+			return -1;
 		}
 	}
 
@@ -98,8 +104,5 @@ int initFileSystem(uint64_t numberOfBlocks, uint64_t blockSize)
 
 void exitFileSystem()
 {
-	free(vcb);
-	free(FAT);
-	return -1;
 	printf("System exiting\n");
 }
