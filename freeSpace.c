@@ -24,7 +24,7 @@ int initFreeSpace(uint64_t numberOfBlocks, uint64_t blockSize) {
 
     //Initialize vcb values
     vcb->totalFreeSpace = numberOfBlocks - blocksNeeded;
-    vcb->freeSpaceLocation = 1;
+    vcb->freeSpaceLocation = blocksNeeded + 1;
     
     return (blocksWritten == -1) ? -1 : 0; //-1 fail; 0 success
 }
