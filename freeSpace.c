@@ -50,7 +50,7 @@ int writeBlock(uint64_t numberOfBlocks, void * buffer, int location) {
     int blockSize = vcb->blockSize;
     int blocksWritten = 0;
     for (int i = 0; i < numberOfBlocks; i++) {
-        if (LBAwrite(buffer + blockSize * blockWritten, 1, location) == -1) {
+        if (LBAwrite(buffer + blockSize * blocksWritten, 1, location) == -1) {
             return -1;
         }
         location = FAT[location];
