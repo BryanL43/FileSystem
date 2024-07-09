@@ -26,7 +26,7 @@
 #include "fsLow.h"
 #include "mfs.h"
 
-#define SIGNATURE 7263366117696533168
+#define SIGNATURE 7953758755008102994
 
 struct VCB* vcb;
 int* FAT;
