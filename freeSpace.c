@@ -3,7 +3,7 @@
 #include "fsLow.h"
 
 int initFreeSpace(uint64_t numberOfBlocks, uint64_t blockSize) {
-    int bytesNeeded = numberOfBlocks * sizeof(int)
+    int bytesNeeded = numberOfBlocks * sizeof(int);
     int blocksNeeded = (bytesNeeded + blockSize - 1) / blockSize;
 
     FAT[0] = 0xFFFFFFFD;
@@ -36,10 +36,10 @@ int getFreeBlocks(uint64_t numberOfBlocks) {
 
     for( int i = 1; i < numberOfBlocks; i ++ ) {
         currentBlock = nextBlock; //Careful with this part will look later (Kevin looked and fixed)
-        nextBlock = fat[currentBlock];
+        nextBlock = FAT[currentBlock];
         volumeControlBlock->totalFreeSpace--;
     }
-    fat[currentBlock] = 0xFFFFFFFD;
+    FAT[currentBlock] = 0xFFFFFFFD;
     volumeControlBlock->freeSpaceLocation = nextBlock;
     return head;
 }
