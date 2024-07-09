@@ -1,5 +1,4 @@
-#include "fsDesign.h"
-#include "fsLow.h"
+#include "directory.h"
 
 DirectoryEntry *initDirectory(int minEntries, DirectoryEntry *parent)
 {
@@ -27,7 +26,7 @@ DirectoryEntry *initDirectory(int minEntries, DirectoryEntry *parent)
     }
 
     // Initialize . and ..
-    int newLoc = 100; // TODO: Replace with fsalloc(blocksNeeded)
+    int newLoc = getFreeBlocks(blocksNeeded);
     time_t currentTime = time(NULL);
 
     // Initialize "."
@@ -47,6 +46,8 @@ DirectoryEntry *initDirectory(int minEntries, DirectoryEntry *parent)
 
     memcpy(&DEs[1], &DEs[0], sizeof(DirectoryEntry));
     strcpy(DEs[0].name, "..");
+
+    writeBlock(blocksNeeded, DEs, newLoc);
 
     return DEs;
 }

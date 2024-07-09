@@ -22,7 +22,7 @@
 
 #include "freeSpace.h"
 #include "fsDesign.h"
-#include "directory.c"
+#include "directory.h"
 #include "fsLow.h"
 #include "mfs.h"
 
@@ -80,8 +80,8 @@ int initFileSystem(uint64_t numberOfBlocks, uint64_t blockSize)
 
 		//call initDirectory
 		// return value should be int for location of root directory
-		// initDirectory(vcb->blocksize, Null);
-		vcb->rootLocation = initDirectory(50, NULL); // initDirectory should return rootLocation
+		DirectoryEntry* root = initDirectory(20, NULL);
+		vcb->rootLocation = root->location; 
 
 	}
 	
