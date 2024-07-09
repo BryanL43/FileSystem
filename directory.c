@@ -35,7 +35,7 @@ DirectoryEntry *initDirectory(int minEntries, DirectoryEntry *parent)
 
     time_t currentTime = time(NULL);
 
-    printf("Seconds since January 1, 1970 = %d\n", currentTime);
+    printf("Seconds since January 1, 1970 = %ld\n", currentTime);
 
     // Initialize "."
     DEs[0].location = newLoc;
