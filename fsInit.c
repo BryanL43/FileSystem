@@ -81,7 +81,7 @@ int initFileSystem(uint64_t numberOfBlocks, uint64_t blockSize)
 		//call initDirectory
 		// return value should be int for location of root directory
 		// initDirectory(vcb->blocksize, Null);
-		vcb->rootLocation = initDirectory(50, NULL);
+		vcb->rootLocation = initDirectory(50, NULL); // initDirectory should return rootLocation
 
 	}
 	
