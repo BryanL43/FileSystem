@@ -6,6 +6,7 @@ DirectoryEntry *initDirectory(int minEntries, DirectoryEntry *parent)
     //Determine Memory Requirements
     int bytesNeeded = minEntries * sizeof(DirectoryEntry);
     int blocksNeeded = (bytesNeeded + vcb->blockSize - 1) / vcb->blockSize;
+    printf("Blocks needed: %d", blocksNeeded);
     int bytesToAlloc = bytesNeeded * vcb->blockSize;
     // Reduce wasted space
     int actualEntries = bytesToAlloc / sizeof(DirectoryEntry);
