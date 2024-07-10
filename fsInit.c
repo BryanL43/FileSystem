@@ -51,29 +51,31 @@ int initFileSystem(uint64_t numberOfBlocks, uint64_t blockSize)
 		return -1;
 	}
 
-	//root = malloc(sizeof(DirectoryEntry));
-
 	LBAread(vcb, 1, 0);
 
 	if (vcb->signature == SIGNATURE) {
-		//I will do more research in this section to check what we need to do
-		//for if the signature exist 
-
-
-		//load freespace
-		//@parameters(VCB* vcb, int blocksize, or whatever else you need)
-		//no return value up to change
-
+		
+		// Load FAT
 		int bytesNeeded = numberOfBlocks * sizeof(int);
 		int blocksNeeded = (bytesNeeded + blockSize - 1) / blockSize;
         LBAread(FAT, blocksNeeded, vcb->freeSpaceLocation);
 
+		// Load root directory
+		root = malloc(vcb->rootSize * blockSize);
+		if (root == NULL) {
+			printf("Failed to allocate root space!\n");
+			free(vcb);
+			free(FAT);
+			return -1;
+		}
 
-		//load rootdirectiory
-		//@parameters(int rootlocation, or whatever else you need)
-		//no return value for now
-		
-		LBAread(root,vcb->rootsize, vcb->rootLocation);
+		if (LBAread(root, vcb->rootSize, vcb->rootLocation) < 0) {
+			printf("Failed to read root!\n");
+			free(vcb);
+			free(FAT);
+			free(root);
+			return -1;
+		}
 		
 	} else {
 		vcb->signature = SIGNATURE;
@@ -85,7 +87,6 @@ int initFileSystem(uint64_t numberOfBlocks, uint64_t blockSize)
 			printf("Failed to initialize free space!\n");
 			free(vcb);
 			free(FAT);
-			free(root);
 			return -1;
 		}
 
@@ -98,6 +99,8 @@ int initFileSystem(uint64_t numberOfBlocks, uint64_t blockSize)
 			free(root);
 			return -1;
 		}
+		vcb->rootLocation = root[0].location;
+		vcb->rootSize = (root[0].size + blockSize - 1) / blockSize;
 
 		if (LBAwrite(vcb, 1, 0) == -1) {
 			printf("Error writing vcb!\n");
