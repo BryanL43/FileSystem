@@ -39,7 +39,7 @@ DirectoryEntry *initDirectory(int minEntries, DirectoryEntry *parent)
 
     // Initialize "."
     DEs[0].location = newLoc;
-    DEs[0].size = bytesToAlloc;
+    DEs[0].size = actualEntries * sizeof(DirectoryEntry);
     strcpy(DEs[0].name, ".");
     DEs[0].isDirectory = 'd';
     DEs[0].dateCreated = currentTime;
