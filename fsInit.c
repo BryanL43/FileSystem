@@ -30,6 +30,7 @@
 
 struct VCB* vcb;
 int* FAT;
+DirectoryEntry* root;
 
 int initFileSystem(uint64_t numberOfBlocks, uint64_t blockSize)
 {
@@ -84,6 +85,7 @@ int initFileSystem(uint64_t numberOfBlocks, uint64_t blockSize)
 			printf("Failed to initialize free space!\n");
 			free(vcb);
 			free(FAT);
+			free(root);
 			return -1;
 		}
 
@@ -93,6 +95,7 @@ int initFileSystem(uint64_t numberOfBlocks, uint64_t blockSize)
 			printf("Failed to initialize the root directory!\n");
 			free(vcb);
 			free(FAT);
+			free(root);
 			return -1;
 		}
 
@@ -100,6 +103,7 @@ int initFileSystem(uint64_t numberOfBlocks, uint64_t blockSize)
 			printf("Error writing vcb!\n");
 			free(vcb);
 			free(FAT);
+			free(root);
 			return -1;
 		}
 	}
