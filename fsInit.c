@@ -44,7 +44,8 @@ int initFileSystem(uint64_t numberOfBlocks, uint64_t blockSize)
 	}
 
 	// Instantiate a FAT instance
-	FAT = malloc(numberOfBlocks * sizeof(int));
+	int blocksNeeded = ((numberOfBlocks * sizeof(int)) + blockSize - 1) / blockSize;
+	FAT = malloc(blocksNeeded * blockSize);
 	if (FAT == NULL) {
 		printf("Failed to instantiate FAT!\n");
 		free(vcb);
@@ -96,7 +97,6 @@ int initFileSystem(uint64_t numberOfBlocks, uint64_t blockSize)
 			printf("Failed to initialize the root directory!\n");
 			free(vcb);
 			free(FAT);
-			free(root);
 			return -1;
 		}
 		vcb->rootLocation = root[0].location;
