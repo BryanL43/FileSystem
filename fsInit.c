@@ -63,7 +63,8 @@ int initFileSystem(uint64_t numberOfBlocks, uint64_t blockSize)
 		//@parameters(VCB* vcb, int blocksize, or whatever else you need)
 		//no return value up to change
 
-		int blocksNeeded = (numberOfBlocks  + blockSize - 1) / blockSize;
+		int bytesNeeded = numberOfBlocks * sizeof(int);
+		int blocksNeeded = (bytesNeeded + blockSize - 1) / blockSize;
         LBAread(FAT, blocksNeeded, vcb->freeSpaceLocation);
 
 
@@ -71,7 +72,7 @@ int initFileSystem(uint64_t numberOfBlocks, uint64_t blockSize)
 		//@parameters(int rootlocation, or whatever else you need)
 		//no return value for now
 		
-		//LBAread(root,vcb->rootsize, vcb->rootLocation);
+		LBAread(root,vcb->rootsize, vcb->rootLocation);
 		
 	} else {
 		vcb->signature = SIGNATURE;
@@ -94,8 +95,6 @@ int initFileSystem(uint64_t numberOfBlocks, uint64_t blockSize)
 			free(FAT);
 			return -1;
 		}
-
-		vcb->rootLocation = root->location;
 
 		if (LBAwrite(vcb, 1, 0) == -1) {
 			printf("Error writing vcb!\n");
