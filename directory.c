@@ -62,5 +62,6 @@ DirectoryEntry *initDirectory(int minEntries, DirectoryEntry *parent)
         return NULL;
     }
 
+    
     return DEs;
 }

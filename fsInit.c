@@ -101,8 +101,8 @@ int initFileSystem(uint64_t numberOfBlocks, uint64_t blockSize)
 		}
 
 		// Update VCB variables
-		vcb->rootLocation = root[0].location;
-		vcb->rootSize = (root[0].size + blockSize - 1) / blockSize;
+		vcb->rootLocation = root->location;
+		vcb->rootSize = (root->size + blockSize - 1) / blockSize;
 
 		if (LBAwrite(vcb, 1, 0) == -1) {
 			printf("Error writing vcb!\n");
