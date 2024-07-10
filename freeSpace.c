@@ -23,7 +23,7 @@ int initFreeSpace(uint64_t numberOfBlocks, uint64_t blockSize) {
     int blocksWritten = LBAwrite(FAT, blocksNeeded, 1);
 
     // Initialize vcb values
-    vcb->totalFreeSpace = numberOfBlocks - blocksNeeded;
+    vcb->totalFreeSpace = numberOfBlocks - blocksNeeded -1; // -1 because of VCB
 
     // FAT table starts at block 1, right after VCB block
     vcb->freeSpaceLocation = 1;
