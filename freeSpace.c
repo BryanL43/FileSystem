@@ -60,7 +60,7 @@ int getFreeBlocks(uint64_t numberOfBlocks) {
     }
 
     // Break link to indicate end of requested free space
-    FAT[currentBlock + 1] = 0xFFFFFFFD;
+    FAT[currentBlock] = 0xFFFFFFFD;
     vcb->firstFreeBlock = nextBlock;
 
     // Update the FAT table in Volume
