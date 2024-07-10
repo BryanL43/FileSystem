@@ -1,6 +1,7 @@
 #include "directory.h"
 #include <time.h>
 
+// Uses Malloc must free what ever is returned
 DirectoryEntry *initDirectory(int minEntries, DirectoryEntry *parent)
 {
     // Determine Memory Requirements
@@ -54,7 +55,7 @@ DirectoryEntry *initDirectory(int minEntries, DirectoryEntry *parent)
 
     // Copy the parent into the .. directory
     memcpy(&DEs[1], dotdot, sizeof(DirectoryEntry));
-    strcpy(DEs[0].name, "..");
+    strcpy(DEs[1].name, "..");
 
     // Call from freeSpace to write blocks using the FAT table
     if (writeBlock(blocksNeeded, DEs, newLoc) == -1) {
