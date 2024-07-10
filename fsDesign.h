@@ -30,9 +30,11 @@ typedef struct VCB
    int totalFreeSpace;     // total free blocks
 
    int rootLocation;       // location to root directory
+   int rootsize;           // size of root directory
 } VCB;
 
 extern struct VCB* vcb;
 extern int* FAT;
+extern DirectoryEntry* root;
 
 #endif

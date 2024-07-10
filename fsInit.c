@@ -51,6 +51,8 @@ int initFileSystem(uint64_t numberOfBlocks, uint64_t blockSize)
 		return -1;
 	}
 
+	//root = malloc(sizeof(DirectoryEntry));
+
 	LBAread(vcb, 1, 0);
 
 	if (vcb->signature == SIGNATURE) {
@@ -62,10 +64,15 @@ int initFileSystem(uint64_t numberOfBlocks, uint64_t blockSize)
 		//@parameters(VCB* vcb, int blocksize, or whatever else you need)
 		//no return value up to change
 
+		int blocksNeeded = (numberOfBlocks  + blockSize - 1) / blockSize;
+        LBAread(FAT, blocksNeeded, vcb->freeSpaceLocation);
+
 
 		//load rootdirectiory
 		//@parameters(int rootlocation, or whatever else you need)
 		//no return value for now
+		
+		//LBAread(root,vcb->rootsize, vcb->rootLocation);
 		
 	} else {
 		vcb->signature = SIGNATURE;
