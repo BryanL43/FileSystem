@@ -56,6 +56,7 @@ DirectoryEntry *initDirectory(int minEntries, DirectoryEntry *parent)
     memcpy(&DEs[1], dotdot, sizeof(DirectoryEntry));
     strcpy(DEs[0].name, "..");
 
+    // Call from freeSpace to write blocks using the FAT table
     if (writeBlock(blocksNeeded, DEs, newLoc) == -1) {
         printf("Error: Failed to write block for directory!\n");
         return NULL;

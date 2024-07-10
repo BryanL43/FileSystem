@@ -99,6 +99,8 @@ int initFileSystem(uint64_t numberOfBlocks, uint64_t blockSize)
 			free(FAT);
 			return -1;
 		}
+
+		// Update VCB variables
 		vcb->rootLocation = root[0].location;
 		vcb->rootSize = (root[0].size + blockSize - 1) / blockSize;
 
