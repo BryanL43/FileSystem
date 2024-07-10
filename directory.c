@@ -11,7 +11,7 @@ DirectoryEntry *initDirectory(int minEntries, DirectoryEntry *parent)
     // Reduce wasted space
     int actualEntries = bytesToAlloc / sizeof(DirectoryEntry);
     
-    DirectoryEntry *DEs = malloc(bytesToAlloc);
+    DirectoryEntry *DEs = malloc(actualEntries * sizeof(DirectoryEntry));
     if (DEs == NULL) {
         return NULL;
     }

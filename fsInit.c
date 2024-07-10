@@ -92,7 +92,7 @@ int initFileSystem(uint64_t numberOfBlocks, uint64_t blockSize)
 		}
 
 		// Initialize the root directory
-		DirectoryEntry* root = initDirectory(20, NULL);
+		root = initDirectory(20, NULL);
 		if (root == NULL) {
 			printf("Failed to initialize the root directory!\n");
 			free(vcb);
