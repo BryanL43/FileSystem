@@ -13,7 +13,7 @@ DirectoryEntry *initDirectory(int minEntries, DirectoryEntry *parent)
 
     DirectoryEntry *DEs = malloc(bytesToAlloc);
     if (DEs == NULL) {
-        return NULL;
+        return NULL;I 
     }
 
     // Initialize all the new DEs to a known free state
@@ -56,6 +56,12 @@ DirectoryEntry *initDirectory(int minEntries, DirectoryEntry *parent)
     // Copy the parent into the .. directory
     memcpy(&DEs[1], dotdot, sizeof(DirectoryEntry));
     strcpy(DEs[0].name, "..");
+
+    // Update the size of root dir in VCB as blocks
+    vcb->rootsize = blocksNeeded;
+
+    // Update the location of root dir in VCB
+    vcb->rootLocation = newLoc;
 
     if (writeBlock(blocksNeeded, DEs, newLoc) == -1) {
         printf("Error: Failed to write block for directory!\n");
