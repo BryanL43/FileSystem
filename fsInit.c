@@ -1,18 +1,18 @@
 /**************************************************************
- * Class::  CSC-415-0# Spring 2024
- * Name::
- * Student IDs::
- * GitHub-Name::
- * Group-Name::
- * Project:: Basic File System
- *
- * File:: fsInit.c
- *
- * Description:: Main driver for file system assignment.
- *
- * This file is where you will start and initialize your system
- *
- **************************************************************/
+* Class::  CSC-415-01 Summer 2024
+* Name:: Kevin Lam, Bryan Lee, Matt Stoffel, Bryan Yao
+* Student IDs:: 922350179, 922649673, 923127111, 922709642
+* GitHub-Name:: MattRStoffel
+* Group-Name:: Robert Bierman
+* Project:: Basic File System
+*
+* File:: fsInit.c
+*
+* Description:: Main driver for the file system assignment.
+* This file initialize the volume control block, file allocation table,
+* and the root directory.
+*
+**************************************************************/
 
 #include <stdlib.h>
 #include <unistd.h>
@@ -32,6 +32,13 @@ struct VCB* vcb;
 int* FAT;
 DirectoryEntry* root;
 
+/**
+ * Initialize the file system's VCB, FAT, and root directory.
+ * 
+ * @param numberOfBlocks The total number of blocks available in the file system.
+ * @param blockSize The size of each block in bytes.
+ * @return Returns 0 on success, and -1 on failure.
+*/
 int initFileSystem(uint64_t numberOfBlocks, uint64_t blockSize)
 {
 	printf("Initializing File System with %ld blocks with a block size of %ld\n", numberOfBlocks, blockSize);
@@ -54,14 +61,15 @@ int initFileSystem(uint64_t numberOfBlocks, uint64_t blockSize)
 
 	LBAread(vcb, 1, 0);
 
-	if (vcb->signature == SIGNATURE) {
+	// Check if the file system is initialized already
+	if (vcb->signature == SIGNATURE) { // Case: Initialized already
 		
-		// Load FAT
+		// Load the FAT from the storage
 		int bytesNeeded = numberOfBlocks * sizeof(int);
 		int blocksNeeded = (bytesNeeded + blockSize - 1) / blockSize;
         LBAread(FAT, blocksNeeded, vcb->freeSpaceLocation);
 
-		// Load root directory
+		// Instantiate and load root directory
 		root = malloc(vcb->rootSize * blockSize);
 		if (root == NULL) {
 			printf("Failed to allocate root space!\n");
@@ -78,12 +86,12 @@ int initFileSystem(uint64_t numberOfBlocks, uint64_t blockSize)
 			return -1;
 		}
 		
-	} else {
+	} else { //Case: File system is not yet initialized
 		vcb->signature = SIGNATURE;
 		vcb->blockSize = blockSize;
 		vcb->totalBlocks = numberOfBlocks;
 
-		// Initalize Freespace
+		// Initalize the FAT free space management system
 		if (initFreeSpace(numberOfBlocks, blockSize) != 0) {
 			printf("Failed to initialize free space!\n");
 			free(vcb);
@@ -100,12 +108,13 @@ int initFileSystem(uint64_t numberOfBlocks, uint64_t blockSize)
 			return -1;
 		}
 
-		// Update VCB variables
+		// Update root information in VCB
 		vcb->rootLocation = root->location;
 		vcb->rootSize = (root->size + blockSize - 1) / blockSize;
 
+		// Write the VCB to the volume
 		if (LBAwrite(vcb, 1, 0) == -1) {
-			printf("Error writing vcb!\n");
+			printf("Error writing VCB!\n");
 			free(vcb);
 			free(FAT);
 			free(root);
@@ -118,5 +127,8 @@ int initFileSystem(uint64_t numberOfBlocks, uint64_t blockSize)
 
 void exitFileSystem()
 {
+	free(vcb);
+	free(FAT);
+	free(root);
 	printf("System exiting\n");
 }

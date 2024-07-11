@@ -3,6 +3,7 @@
     "files.associations": {
         "freeSpace.C": "cpp",
         "unistd.h": "c",
-        "stdlib.h": "c"
+        "stdlib.h": "c",
+        "stdio.h": "c"
     }
 }

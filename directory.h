@@ -1,3 +1,17 @@
+/**************************************************************
+* Class::  CSC-415-01 Summer 2024
+* Name:: Kevin Lam, Bryan Lee, Matt Stoffel, Bryan Yao
+* Student IDs:: 922350179, 922649673, 923127111, 922709642
+* GitHub-Name:: MattRStoffel
+* Group-Name:: Robert Bierman
+* Project:: Basic File System
+*
+* File:: directory.h
+*
+* Description:: Interface for the directory creation method
+*
+**************************************************************/
+
 #ifndef _DIRECTORY_H
 #define _DIRECTORY_H
 
