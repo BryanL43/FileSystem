@@ -15,6 +15,7 @@
 #ifndef _FSDES_H
 #define _FSDES_H
 #include <time.h>
+#include "directory.h"
 
 typedef struct VCB
 {
@@ -30,6 +31,16 @@ typedef struct VCB
    int rootLocation;       // location to root directory
    int rootSize;           // size of root directory
 } VCB;
+
+typedef struct ppInfo {
+   struct DirectoryEntry* parent;
+   char* lastElement;
+   int* lastElementIndex;
+} ppInfo;
+
+//Note: actual return is ppi while int is status return (0 or -1).
+int parsePath(const char* path, ppInfo* ppi);
+struct DirectoryEntry* loadDir(struct DirectoryEntry* directory, int index);
 
 extern struct VCB* vcb;
 extern int* FAT;

@@ -24,9 +24,9 @@
 #include "fsLow.h"
 
 int initFreeSpace(uint64_t numberOfBlocks, uint64_t blockSize);
-
 int getFreeBlocks(uint64_t numberOfBlocks);
-
-int writeBlock(uint64_t numberOfBlocks, void * buffer, int location);
+int writeBlock(void * buffer, uint64_t numberOfBlocks, int location);
+int readBlock(void * buffer, uint64_t numberOfBlocks, int location);
+int seekBlock(uint64_t numberOfBlocks, int location);
 
 #endif

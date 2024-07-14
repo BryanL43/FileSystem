@@ -86,7 +86,9 @@ int getFreeBlocks(uint64_t numberOfBlocks) {
     vcb->firstFreeBlock = nextBlock;
 
     // Update the FAT table in Volume
-    LBAwrite(FAT, vcb->totalFreeSpace, vcb->freeSpaceLocation);
+    int bytesNeeded = vcb->totalBlocks * sizeof(int);
+    int blocksNeeded = (bytesNeeded + vcb->blockSize - 1) / vcb->blockSize;
+    LBAwrite(FAT, blocksNeeded, vcb->freeSpaceLocation);
 
     return head;
 }
@@ -99,13 +101,13 @@ int getFreeBlocks(uint64_t numberOfBlocks) {
  * @param location The starting location of where the blocks are read from.
  * @return Returns the number of blocks successfully written, or -1 if an error occurs.
 */
-int writeBlock(uint64_t numberOfBlocks, void* buffer, int location) {
+int writeBlock(void* buffer, uint64_t numberOfBlocks, int location) {
     int blockSize = vcb->blockSize;
     int blocksWritten = 0;
 
     // Write each block from buffer to volume
     for (int i = 0; i < numberOfBlocks; i++) {
-        if (LBAwrite(buffer + (blockSize * blocksWritten), 1, location) == -1) {
+        if (LBAwrite(buffer + blockSize * i, 1, location) == -1) {
             return -1;
         }
         location = FAT[location];
@@ -113,4 +115,25 @@ int writeBlock(uint64_t numberOfBlocks, void* buffer, int location) {
     }
 
     return blocksWritten;
+}
+
+int readBlock(void* buffer, uint64_t numberOfBlocks, int location) {
+    int blockSize = vcb->blockSize;
+    int blocksRead = 0;
+
+    for (int i = 0; i < numberOfBlocks; i++) {
+        if (LBAread(buffer + blockSize * i, 1, location) == -1) {
+            return -1;
+        }
+        location = FAT[location];
+        blocksRead++;
+    }
+    return blocksRead;
+}
+
+int seekBlock(uint64_t numberOfBlocks, int location) {
+    for (int i = 0; i < numberOfBlocks; i++) {
+        location = FAT[location];
+    }
+    return location;
 }

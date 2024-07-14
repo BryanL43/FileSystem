@@ -20,6 +20,12 @@
 #include "fsDesign.h"
 #include "freeSpace.h"
 
+// Default directory size is 64 directory entries
+#define DEFAULT_DIR_SIZE 64
+
+// DIR_SIZE = 64 * 80 = 5120 where 5120 % 512 = 0 and 5120 / 512 = 10 blocks
+#define DIR_SIZE DEFAULT_DIR_SIZE * sizeof(DirectoryEntry)
+
 typedef struct DirectoryEntry
 {
    time_t dateCreated;     // seconds since epoch
@@ -38,4 +44,6 @@ typedef struct DirectoryEntry
 DirectoryEntry *initDirectory(int minEntries, DirectoryEntry *parent);
 
 extern DirectoryEntry* root;
+extern DirectoryEntry* cwd;
+extern char* cwdPathName;
 #endif

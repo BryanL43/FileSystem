@@ -31,6 +31,8 @@
 struct VCB* vcb;
 int* FAT;
 DirectoryEntry* root;
+DirectoryEntry* cwd;
+char* cwdPathName;
 
 /**
  * Initialize the file system's VCB, FAT, and root directory.
@@ -59,11 +61,20 @@ int initFileSystem(uint64_t numberOfBlocks, uint64_t blockSize)
 		return -1;
 	}
 
+	// Instantiate current working directory path name
+	cwdPathName = malloc(blockSize); //Size up for debate
+	if (cwdPathName == NULL) {
+		printf("Failed to instantiate cwd path name!\n");
+		free(vcb);
+		free(FAT);
+		return -1;
+	}
+
 	LBAread(vcb, 1, 0);
 
 	// Check if the file system is initialized already
 	if (vcb->signature == SIGNATURE) { // Case: Initialized already
-		
+		printf("Disk already formatted!\n");
 		// Load the FAT from the storage
 		int bytesNeeded = numberOfBlocks * sizeof(int);
 		int blocksNeeded = (bytesNeeded + blockSize - 1) / blockSize;
@@ -100,7 +111,7 @@ int initFileSystem(uint64_t numberOfBlocks, uint64_t blockSize)
 		}
 
 		// Initialize the root directory
-		root = initDirectory(20, NULL);
+		root = initDirectory(DEFAULT_DIR_SIZE, NULL);
 		if (root == NULL) {
 			printf("Failed to initialize the root directory!\n");
 			free(vcb);
@@ -121,6 +132,11 @@ int initFileSystem(uint64_t numberOfBlocks, uint64_t blockSize)
 			return -1;
 		}
 	}
+	
+	//Set current working directory as root
+	fs_setcwd("/");
+	strncpy(cwdPathName, "/", 2);
+	cwdPathName[1] = '\0';
 
 	return 0;
 }
@@ -130,5 +146,7 @@ void exitFileSystem()
 	free(vcb);
 	free(FAT);
 	free(root);
+	free(cwd);
+	free(cwdPathName);
 	printf("System exiting\n");
 }

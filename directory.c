@@ -31,7 +31,7 @@ DirectoryEntry *initDirectory(int minEntries, DirectoryEntry *parent)
     int actualEntries = bytesToAlloc / sizeof(DirectoryEntry);
     
     // Prepare space for the directory entries
-    DirectoryEntry *DEs = malloc(actualEntries * sizeof(DirectoryEntry));
+    DirectoryEntry *DEs = malloc(bytesToAlloc);
     if (DEs == NULL) {
         return NULL;
     }
@@ -77,7 +77,7 @@ DirectoryEntry *initDirectory(int minEntries, DirectoryEntry *parent)
     strcpy(DEs[1].name, "..");
 
     // Write the directory blocks to volume
-    if (writeBlock(blocksNeeded, DEs, newLoc) == -1) {
+    if (writeBlock(DEs, blocksNeeded, newLoc) == -1) {
         printf("Error: Failed to write block for directory!\n");
         return NULL;
     }
