@@ -5,7 +5,14 @@
 
 int fs_setcwd(char *pathname) {
     ppInfo* ppi = malloc(sizeof(ppInfo));
+    if (ppi == NULL) {
+        return -1;
+    }
     ppi->parent = malloc(DIR_SIZE);
+    if(ppi->parent == NULL) {
+        free(ppi);
+        return -1;
+    }
 
     int ret = parsePath(pathname, ppi);
     if (ret == -1 || ppi->lastElementIndex == -1) { // parsePath return error
@@ -72,26 +79,41 @@ int fs_mkdir(const char *pathname, mode_t mode) {
 int fs_isDir(char* path) 
 {
     ppInfo* ppi = malloc(sizeof(ppInfo));
-    if (ppi == NULL) 
-    {
-        return 0; 
+    if (ppi == NULL) {
+        return -1;
+    }
+    ppi->parent = malloc(DIR_SIZE);
+    if(ppi->parent == NULL) {
+        free(ppi);
+        return -1;
     }
     if (parsePath(path, ppi) != 0) 
     {
+        free(ppi->parent);
         free(ppi);        
         return 0;
     }
 
-    // if(ppi->parent[ppi->lastElementIndex].isDirectory == 'd') 
-    if(0)
+    DirectoryEntry* dir = loadDir(ppi->parent);
+
+    if(dir[ppi->lastElementIndex].isDirectory == 'd') `
     {
+        free(dir);
         free(ppi);
         return 1;
     }
+
+    free(dir);
+    free(ppi->parent);
     free(ppi);
     return 0;
 }
 
 int fs_isFile(char* path) {
     return !fs_isDir;
+}
+
+struct fs_diriteminfo *fs_readdir(fdDir *dirp)
+{
+    return NULL;
 }

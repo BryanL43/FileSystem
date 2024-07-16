@@ -20,7 +20,7 @@
 
 DirectoryEntry* loadDir(DirectoryEntry* directory);
 int findUnusedDE(DirectoryEntry* directory);
-int FindNameInDir(DirectoryEntry* directory, char* name);
+int findNameInDir(DirectoryEntry* directory, char* name);
 int parsePath(char* path, ppInfo* ppi);
 
 #endif

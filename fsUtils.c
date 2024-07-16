@@ -59,7 +59,7 @@ int findUnusedDE(DirectoryEntry* directory) {
  * @param name the name of the directory that is being searched for.
  * @return the index of the directory entry or -1 if not found.
 */
-int FindNameInDir(DirectoryEntry* directory, char* name) {
+int findNameInDir(DirectoryEntry* directory, char* name) {
     if (directory == NULL || name == NULL) {
         return -1;
     }
@@ -105,7 +105,7 @@ int parsePath(char* path, ppInfo* ppi) {
     }
 
     ppi->lastElement = token1;
-    ppi->lastElementIndex = FindNameInDir(parent, token1);
+    ppi->lastElementIndex = findNameInDir(parent, token1);
     
     char* token2 = strtok_r(NULL, "/", &saveptr);
     if (token2 == NULL) {
