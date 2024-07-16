@@ -55,9 +55,10 @@ int initFreeSpace(uint64_t numberOfBlocks, uint64_t blockSize) {
  * Retrieves a specified number of free blocks.
  * 
  * @param numberOfBlocks The number of contiguous blocks requested.
+ * @param file_to_extend The directory entry of the file being modified assign NULL for new files
  * @return Returns the index of the first free block, or -1 if unsuccessful.
 */
-int getFreeBlocks(uint64_t numberOfBlocks) {
+int getFreeBlocks(uint64_t numberOfBlocks, struct DirectoryEntry* file_to_extend) {
     if (numberOfBlocks < 1) {
         return -1;
     }
@@ -69,6 +70,13 @@ int getFreeBlocks(uint64_t numberOfBlocks) {
     int head = vcb->firstFreeBlock;
     int currentBlock = vcb->firstFreeBlock;
     int nextBlock = FAT[currentBlock];
+
+    //modify the tail of the exsiting file to point at new blocks
+    if (file_to_extend != NULL) {
+        int x = file_to_extend->location - 1 + 
+        (file_to_extend->size +(vcb->blockSize - 1) / vcb->blockSize);
+        FAT[x] = head;
+    }
 
     vcb->totalFreeSpace--;
 

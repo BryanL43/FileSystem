@@ -48,7 +48,7 @@ DirectoryEntry *initDirectory(int minEntries, DirectoryEntry *parent)
     }
 
     // Request free space for the directory
-    int newLoc = getFreeBlocks(blocksNeeded);
+    int newLoc = getFreeBlocks(blocksNeeded, NULL);
     if (newLoc == -1) {
         return NULL;
     }
