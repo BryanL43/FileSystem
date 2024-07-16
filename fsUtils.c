@@ -22,12 +22,12 @@
 */
 DirectoryEntry* loadDir(DirectoryEntry* directory) {
     int location = directory->location;
-    DirectoryEntry* temp = malloc(DIR_SIZE);
+    DirectoryEntry* temp = malloc(directory->size);
     if (temp == NULL) {
         return NULL;
     }
 
-    int numberOfBlocks = (DIR_SIZE + vcb->blockSize - 1) / vcb->blockSize;
+    int numberOfBlocks = (directory->size + vcb->blockSize - 1) / vcb->blockSize;
     if (readBlock(temp, numberOfBlocks, location) == -1) {
         free(temp);
         return NULL;
@@ -64,7 +64,7 @@ int findNameInDir(DirectoryEntry* directory, char* name) {
         return -1;
     }
 
-    int numEntries = DIR_SIZE / sizeof(DirectoryEntry);
+    int numEntries = directory->size / sizeof(DirectoryEntry);
     for (int i = 0; i < numEntries; i++) {
         if (directory[i].location != -1 && strcmp(directory[i].name, name) == 0) {
             return i;

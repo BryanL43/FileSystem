@@ -5,14 +5,7 @@
 
 int fs_setcwd(char *pathname) {
     ppInfo* ppi = malloc(sizeof(ppInfo));
-    if (ppi == NULL) {
-        return -1;
-    }
-    ppi->parent = malloc(DIR_SIZE);
-    if(ppi->parent == NULL) {
-        free(ppi);
-        return -1;
-    }
+    ppi->parent = malloc(DirectoryEntry);
 
     int ret = parsePath(pathname, ppi);
     if (ret == -1 || ppi->lastElementIndex == -1) { // parsePath return error
@@ -66,10 +59,14 @@ int fs_mkdir(const char *pathname, mode_t mode) {
         free(newDir);
         return -1;
     }
-    
-    memcpy(&(ppi.parent[vacantDE]), newDir, sizeof(DirectoryEntry));
-    strcpy(ppi.parent[vacantDE].name, ppi.lastElement);
 
+    DirectoryEntry* x = loadDir(ppi.parent);
+    
+    memcpy(&(x[vacantDE]), newDir, sizeof(DirectoryEntry));
+    strcpy(x[vacantDE].name, ppi.lastElement);
+
+    writeBlock(x, x->size / vcb->blockSize, x->location);
+    free(x);
     free(newDir);
     //Need Free if not working dir here!!! [TO-DO]
 
@@ -81,7 +78,7 @@ int fs_isDir(char* path)
     ppInfo* ppi = malloc(sizeof(ppInfo));
     if (ppi == NULL)
         return -1;
-    ppi->parent = malloc(DIR_SIZE);
+    ppi->parent = malloc(sizeof(DirectoryEntry));
     if(ppi->parent == NULL) {
         free(ppi);
         return -1;
