@@ -79,9 +79,8 @@ int fs_mkdir(const char *pathname, mode_t mode) {
 int fs_isDir(char* path) 
 {
     ppInfo* ppi = malloc(sizeof(ppInfo));
-    if (ppi == NULL) {
+    if (ppi == NULL)
         return -1;
-    }
     ppi->parent = malloc(DIR_SIZE);
     if(ppi->parent == NULL) {
         free(ppi);
@@ -96,7 +95,7 @@ int fs_isDir(char* path)
 
     DirectoryEntry* dir = loadDir(ppi->parent);
 
-    if(dir[ppi->lastElementIndex].isDirectory == 'd') `
+    if(dir[ppi->lastElementIndex].isDirectory == 'd') 
     {
         free(dir);
         free(ppi);
@@ -115,5 +114,19 @@ int fs_isFile(char* path) {
 
 struct fs_diriteminfo *fs_readdir(fdDir *dirp)
 {
-    return NULL;
+    if(dirp == NULL) 
+        return NULL;
+    if(dirp->dirEntryPosition > dirp->d_reclen) {
+        return NULL;
+    }
+    
+    unsigned short pos = dirp->dirEntryPosition;
+    dirp->di->d_reclen = 
+        (dirp->directory[pos].size + sizeof(DirectoryEntry) - 1) 
+        / sizeof(DirectoryEntry);
+    dirp->di->fileType = dirp->directory[pos].isDirectory;
+    strcpy(dirp->di->d_name, dirp->directory[pos].name);
+    
+    dirp->dirEntryPosition += 1;
+    return dirp->di;
 }
