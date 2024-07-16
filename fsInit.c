@@ -48,7 +48,6 @@ int initFileSystem(uint64_t numberOfBlocks, uint64_t blockSize)
 	// Instantiate a volume control block instance
 	vcb = malloc(blockSize);
 	if (vcb == NULL) {
-		printf("Failed to instantiate VCB!\n");
 		return -1;
 	}
 
@@ -56,7 +55,6 @@ int initFileSystem(uint64_t numberOfBlocks, uint64_t blockSize)
 	int blocksNeeded = ((numberOfBlocks * sizeof(int)) + blockSize - 1) / blockSize;
 	FAT = malloc(blocksNeeded * blockSize);
 	if (FAT == NULL) {
-		printf("Failed to instantiate FAT!\n");
 		free(vcb);
 		return -1;
 	}
@@ -64,7 +62,6 @@ int initFileSystem(uint64_t numberOfBlocks, uint64_t blockSize)
 	// Instantiate current working directory path name
 	cwdPathName = malloc(blockSize); //Size up for debate
 	if (cwdPathName == NULL) {
-		printf("Failed to instantiate cwd path name!\n");
 		free(vcb);
 		free(FAT);
 		return -1;
@@ -74,7 +71,6 @@ int initFileSystem(uint64_t numberOfBlocks, uint64_t blockSize)
 
 	// Check if the file system is initialized already
 	if (vcb->signature == SIGNATURE) { // Case: Initialized already
-		printf("Disk already formatted!\n");
 		// Load the FAT from the storage
 		int bytesNeeded = numberOfBlocks * sizeof(int);
 		int blocksNeeded = (bytesNeeded + blockSize - 1) / blockSize;
@@ -83,14 +79,12 @@ int initFileSystem(uint64_t numberOfBlocks, uint64_t blockSize)
 		// Instantiate and load root directory
 		root = malloc(vcb->rootSize * blockSize);
 		if (root == NULL) {
-			printf("Failed to allocate root space!\n");
 			free(vcb);
 			free(FAT);
 			return -1;
 		}
 
 		if (LBAread(root, vcb->rootSize, vcb->rootLocation) < 0) {
-			printf("Failed to read root!\n");
 			free(vcb);
 			free(FAT);
 			free(root);
@@ -104,7 +98,6 @@ int initFileSystem(uint64_t numberOfBlocks, uint64_t blockSize)
 
 		// Initalize the FAT free space management system
 		if (initFreeSpace(numberOfBlocks, blockSize) != 0) {
-			printf("Failed to initialize free space!\n");
 			free(vcb);
 			free(FAT);
 			return -1;
@@ -113,7 +106,6 @@ int initFileSystem(uint64_t numberOfBlocks, uint64_t blockSize)
 		// Initialize the root directory
 		root = initDirectory(DEFAULT_DIR_SIZE, NULL);
 		if (root == NULL) {
-			printf("Failed to initialize the root directory!\n");
 			free(vcb);
 			free(FAT);
 			return -1;
@@ -125,7 +117,6 @@ int initFileSystem(uint64_t numberOfBlocks, uint64_t blockSize)
 
 		// Write the VCB to the volume
 		if (LBAwrite(vcb, 1, 0) == -1) {
-			printf("Error writing VCB!\n");
 			free(vcb);
 			free(FAT);
 			free(root);
@@ -135,8 +126,7 @@ int initFileSystem(uint64_t numberOfBlocks, uint64_t blockSize)
 	
 	//Set current working directory as root
 	fs_setcwd("/");
-	strncpy(cwdPathName, "/", 2);
-	cwdPathName[1] = '\0';
+	strcpy(cwdPathName, "/");
 
 	return 0;
 }

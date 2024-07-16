@@ -45,13 +45,11 @@ DirectoryEntry *initDirectory(int minEntries, DirectoryEntry *parent)
         DEs[i].isDirectory = ' ';
         DEs[i].size = 0;
         DEs[i].location = -1;
-        DEs[i].permissions = 0;
     }
 
     // Request free space for the directory
     int newLoc = getFreeBlocks(blocksNeeded);
     if (newLoc == -1) {
-        printf("Error: unable to get free block for directory!\n");
         return NULL;
     }
 
@@ -64,7 +62,6 @@ DirectoryEntry *initDirectory(int minEntries, DirectoryEntry *parent)
     DEs[0].isDirectory = 'd';
     DEs[0].dateCreated = currentTime;
     DEs[0].dateModified = currentTime;
-    DEs[0].permissions = 0;
 
     // Initialize ".."
     DirectoryEntry *dotdot = parent;
@@ -78,7 +75,6 @@ DirectoryEntry *initDirectory(int minEntries, DirectoryEntry *parent)
 
     // Write the directory blocks to volume
     if (writeBlock(DEs, blocksNeeded, newLoc) == -1) {
-        printf("Error: Failed to write block for directory!\n");
         return NULL;
     }
 

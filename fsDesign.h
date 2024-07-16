@@ -35,12 +35,12 @@ typedef struct VCB
 typedef struct ppInfo {
    struct DirectoryEntry* parent;
    char* lastElement;
-   int* lastElementIndex;
+   int lastElementIndex;
 } ppInfo;
 
 //Note: actual return is ppi while int is status return (0 or -1).
-int parsePath(const char* path, ppInfo* ppi);
-struct DirectoryEntry* loadDir(struct DirectoryEntry* directory, int index);
+int parsePath(char* path, ppInfo* ppi);
+struct DirectoryEntry* loadDir(struct DirectoryEntry* directory);
 
 extern struct VCB* vcb;
 extern int* FAT;

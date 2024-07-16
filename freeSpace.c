@@ -59,12 +59,10 @@ int initFreeSpace(uint64_t numberOfBlocks, uint64_t blockSize) {
 */
 int getFreeBlocks(uint64_t numberOfBlocks) {
     if (numberOfBlocks < 1) {
-        printf("Invalid free block request amount!\n");
         return -1;
     }
 
     if (numberOfBlocks > vcb->totalFreeSpace) {
-        printf("Not enough free space!\n");
         return -1;
     }
 
