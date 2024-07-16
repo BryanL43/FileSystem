@@ -20,12 +20,11 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "directory.h"
 #include "fsDesign.h"
 #include "fsLow.h"
 
 int initFreeSpace(uint64_t numberOfBlocks, uint64_t blockSize);
-int getFreeBlocks(uint64_t numberOfBlocks, struct DirectoryEntry* file_to_extend);
+int getFreeBlocks(uint64_t numberOfBlocks, uint64_t file_to_extend);
 int writeBlock(void * buffer, uint64_t numberOfBlocks, int location);
 int readBlock(void * buffer, uint64_t numberOfBlocks, int location);
 int seekBlock(uint64_t numberOfBlocks, int location);
