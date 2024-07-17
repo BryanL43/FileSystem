@@ -4,38 +4,64 @@
 #include "fsUtils.h"
 
 int fs_setcwd(char *pathname) {
-    ppInfo* ppi = malloc(sizeof(ppInfo));
+    ppInfo ppi;
 
-    int ret = parsePath(pathname, ppi);
-    if (ret == -1 || ppi->lastElementIndex == -1) { // parsePath return error
-        free(ppi);
+    int ret = parsePath(pathname, &ppi);
+    if (ret == -1 || ppi.lastElementIndex == -1) { // parsePath returned error
         return -1;
     }
-    
-    if (ppi->lastElementIndex == -2) { // Special "root" case
+
+    if (ppi.lastElementIndex == -2) { // Special "root" case
         cwd = loadDir(&root[0]);
+        if (cwd == NULL) {
+            return -1;
+        }
         strcpy(cwdPathName, "/");
-        free(ppi);
         return 0;
     }
 
-    DirectoryEntry* temp = loadDir(&(ppi->parent[ppi->lastElementIndex]));
+    DirectoryEntry* temp = loadDir(&(ppi.parent[ppi.lastElementIndex]));
     if (temp == NULL) {
-        free(ppi);
         return -1;
     }
-
+    printf("tempsize: %d\n", temp->size);
     memcpy(cwd, temp, temp->size);
-    free(temp);
-    if( pathname[0] == '/' ) {
-        cwdPathName = strdup(pathname);
-    }
-    else {
-        strcat(cwdPathName, pathname);
+
+    // Determine the new path name
+    int newPathLen = strlen(ppi.lastElement) + 2;
+    char *newPath;
+
+    if (pathname[0] == '/') { // Absolute path
+        // Copy the absolute path and append a slash
+        int pathLen = strlen(pathname) + 2;
+        newPath = malloc(pathLen);
+        if (newPath == NULL) {
+            free(cwd);
+            return -1;
+        }
+        strcpy(newPath, pathname);
+        if (newPath[strlen(newPath) - 1] != '/') {
+            strcat(newPath, "/");
+        }
+    } else { // Relative path
+        // Copy the current path and append the new path
+        int currentPathLen = strlen(cwdPathName);
+        newPath = malloc(currentPathLen + newPathLen);
+        if (newPath == NULL) {
+            free(cwd);
+            return -1;
+        }
+        strcpy(newPath, cwdPathName);
+        strcat(newPath, ppi.lastElement);
+        if (newPath[strlen(newPath) - 1] != '/') {
+            strcat(newPath, "/");
+        }
     }
 
-    cwdPathName = strdup(ppi->lastElement);
+    cwdPathName = newPath;
+
     writeBlock(cwd, (cwd->size + vcb->blockSize - 1) / vcb->blockSize, cwd->location);
+    free(temp);
 
     return 0;
 }
@@ -54,10 +80,9 @@ int fs_mkdir(const char *pathname, mode_t mode) {
         return -1;
     }
 
-    int ret = parsePath(mutablePath, &ppi);
-    if (ret < 0) { // Error case
+    if (parsePath(mutablePath, &ppi) == -1) { // Error case
         free(mutablePath);
-        return ret;
+        return -1;
     }
 
     if (ppi.lastElementIndex != -1) { // directory already exist
@@ -72,7 +97,7 @@ int fs_mkdir(const char *pathname, mode_t mode) {
         free(ppi.parent);
         return -1;
     }
-
+    
     int vacantDE = findUnusedDE(ppi.parent);
     if (vacantDE == -1) {
         free(ppi.parent);

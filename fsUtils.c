@@ -43,6 +43,10 @@ DirectoryEntry* loadDir(DirectoryEntry* directory) {
  * @return the index on success or -1 if not found.
 */
 int findUnusedDE(DirectoryEntry* directory) {
+    if (directory == NULL) {
+        return -1;
+    }
+
     for (int i = 0; i < directory->size / sizeof(DirectoryEntry); i++) {
         if ((directory + i)->location == -1) {
             return i;
@@ -72,6 +76,21 @@ int findNameInDir(DirectoryEntry* directory, char* name) {
     }
     
     return -1;
+}
+
+/**
+ * Checks if the directory is empty or not.
+ * 
+ * @param directory the directory that is being checked.
+ * @return -1 if not empty, 1 if empty.
+*/
+int isDirEmpty(DirectoryEntry *directory) {
+    for (int i = 2; i < directory->size / sizeof(DirectoryEntry); i++) {
+        if (directory[i].location > 0) {
+            return -1;
+        }
+    }
+    return 0;
 }
 
 /**
