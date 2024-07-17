@@ -102,6 +102,12 @@ int fs_mkdir(const char *pathname, mode_t mode) {
     
     int vacantDE = findUnusedDE(ppi.parent);
     if (vacantDE == -1) {
+        printf("Growing directory\n");
+        ppi.parent = expandDirectory(ppi.parent);
+        
+        vacantDE = findUnusedDE(ppi.parent);
+    }
+    if (vacantDE < 0) {
         free(ppi.parent);
         free(newDir);
         free(mutablePath);
@@ -138,7 +144,7 @@ int fs_stat(const char *path, struct fs_stat *buf) {
     //     return -1;
     // }
 
-    printf("path: %s\n", path);
+    printf("path: %s\nZ", path);
 
     return 0;
 }
@@ -257,7 +263,7 @@ struct fs_diriteminfo *fs_readdir(fdDir *dirp)
     strcpy(dirp->di->d_name, dirp->directory[pos].name);
     
     // giving another fs_diriteminfo so go to the next one
-    dirp->dirEntryPosition += 1;
+    dirp->dirEntryPosition++;
     return dirp->di;
 }
 

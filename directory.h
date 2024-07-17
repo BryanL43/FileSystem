@@ -39,7 +39,7 @@ typedef struct DirectoryEntry
 
 DirectoryEntry *initDirectory(int minEntries, DirectoryEntry *parent);
 
-int expand_directory(DirectoryEntry* directory);
+DirectoryEntry* expandDirectory(DirectoryEntry* directory);
 
 extern DirectoryEntry* root;
 extern DirectoryEntry* cwd;

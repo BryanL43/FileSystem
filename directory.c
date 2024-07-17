@@ -36,9 +36,9 @@ DirectoryEntry *initDirectory(int minEntries, DirectoryEntry *parent)
         return NULL;
     }
 
+    time_t currentTime = time(NULL);
     // Initialize each directory entry to a known free state
     for(int i = 2; i < actualEntries; i++) {
-        time_t currentTime = time(NULL);
         DEs[i].dateCreated = currentTime;
         DEs[i].dateModified = currentTime;
         strncpy(DEs[i].name, "", sizeof(DEs->name));
@@ -52,8 +52,6 @@ DirectoryEntry *initDirectory(int minEntries, DirectoryEntry *parent)
     if (newLoc == -1) {
         return NULL;
     }
-
-    time_t currentTime = time(NULL);
 
     // Initialize "."
     DEs[0].location = newLoc;
@@ -82,6 +80,46 @@ DirectoryEntry *initDirectory(int minEntries, DirectoryEntry *parent)
 }
 
 
-int expand_directory(DirectoryEntry* directory) {
-    return -1;
+DirectoryEntry* expandDirectory(DirectoryEntry* directory) {
+    int oldNumBlocks = (directory->size + vcb->blockSize - 1) / vcb->blockSize;
+    int oldNumEntries = directory->size / sizeof(DirectoryEntry);
+    
+    int numBlocks = oldNumBlocks * 2;
+    int bytesToAlloc = numBlocks * vcb->blockSize;
+    int actualEntries = bytesToAlloc / sizeof(DirectoryEntry);
+
+    DirectoryEntry *DEs = malloc(bytesToAlloc);
+    if (DEs == NULL) {
+        return NULL;
+    }
+    memcpy(DEs, directory, directory->size);
+    
+    time_t currentTime = time(NULL);
+    printf("%i\n", sizeof(&DEs));
+    printf("---%i----\n", oldNumEntries);
+    // Initialize each directory entry to a known free state
+    for(int i = oldNumEntries; i < actualEntries; i++) {
+        DEs[i].dateCreated = currentTime;
+        DEs[i].dateModified = currentTime;
+        strncpy(DEs[i].name, "", sizeof(DEs->name));
+        DEs[i].isDirectory = ' ';
+        DEs[i].size = 0;
+        DEs[i].location = -1;
+    }
+
+    // Request free space for the expanded directory
+    int newLoc = getFreeBlocks(oldNumBlocks, seekBlock(oldNumBlocks - 1, DEs[0].location));
+    if (newLoc == -1) {
+        return NULL;
+    }
+
+    // Write the directory blocks to volume
+    if (writeBlock(DEs, numBlocks, directory->location) == -1) {
+        return NULL;
+    }
+
+    for(int i = 0; i < actualEntries; i++) {
+        printf("%i\n", DEs[i].location);
+    }
+    return DEs;
 }  
