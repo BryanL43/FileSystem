@@ -104,24 +104,30 @@ int parsePath(char* path, ppInfo* ppi) {
         return 0;
     }
 
-    ppi->lastElement = token1;
-    ppi->lastElementIndex = findNameInDir(parent, token1);
-    
-    char* token2 = strtok_r(NULL, "/", &saveptr);
-    if (token2 == NULL) {
-        ppi->parent = loadDir(parent);
-        return 0;
-    }
+    char* token2;
+    do {
+        ppi->lastElement = token1;
+        ppi->lastElementIndex = findNameInDir(parent, token1);
+        
+        token2 = strtok_r(NULL, "/", &saveptr);
+        if (token2 == NULL) {
+            ppi->parent = loadDir(parent);
+            return 0;
+        }
 
-    if (ppi->lastElementIndex < 0) { // Name doesn't exist (Invalid path)
-        return -1;
-    }
-    
-    printf("IS dir: %d\n", parent[ppi->lastElementIndex].isDirectory == 'd');
+        if (ppi->lastElementIndex < 0) { // Name doesn't exist (Invalid path)
+            return -1;
+        }
 
-    // if (!entryIsDir(parent, ppi->lastElementIndex)) { // Entry is not directory (Invalid path)
-    //     return -1
-    // }
+        if (ppi->parent[ppi->lastElementIndex].isDirectory != 'd') {
+            return -1;
+        }
+
+        DirectoryEntry* temp = loadDir(&(ppi->parent[ppi->lastElementIndex]));
+        free(ppi->parent);
+        ppi->parent = temp;
+        token1 = token2;
+    } while (token2 != NULL);
 
     return 0;
 }

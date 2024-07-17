@@ -35,7 +35,7 @@ int fs_setcwd(char *pathname) {
         strcat(cwdPathName, pathname);
     }
 
-    cwdPathName = strdup(pathname);
+    cwdPathName = strdup(ppi->lastElement);
     printf("CwdPathName: %s\n", cwdPathName);
 
     return 0;
@@ -102,16 +102,18 @@ int fs_mkdir(const char *pathname, mode_t mode) {
     return 0;
 }
 
-// int fs_stat(const char *path, struct fs_stat *buf) {
-//     ppInfo* ppi = malloc(sizeof(ppInfo));
+int fs_stat(const char *path, struct fs_stat *buf) {
+    ppInfo* ppi = malloc(sizeof(ppInfo));
     
-//     int ret = parsePath(path, ppi);
-//     if (ret == -1) {
-//         return -1;
-//     }
+    int ret = parsePath(path, ppi);
+    if (ret == -1) {
+        return -1;
+    }
 
-//     printf("path: %s\n", path);
-// }
+    printf("path: %s\n", path);
+
+    return 0;
+}
 
 int fs_isDir(char* path) 
 {
