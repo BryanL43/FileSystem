@@ -180,9 +180,9 @@ fdDir * fs_opendir(const char *pathname){
         return NULL;
     }
 
-    int valid = parsePath(path, ppi);
+    int notvalid = parsePath(path, ppi);
 
-    if (!valid)
+    if (notvalid)
     {
         return NULL;
     }
@@ -192,11 +192,12 @@ fdDir * fs_opendir(const char *pathname){
         return NULL;
     }
 
-
-    dirp->d_reclen = ppi->parent[ppi->lastElementIndex].size / sizeof(DirectoryEntry);
+//   DirectoryEntry * thisDir = root ;
+//   DirectoryEntry * thisDir = loadDir(&(ppi->parent));
+    DirectoryEntry * thisDir = (ppi->parent);
+    dirp->d_reclen = thisDir->size / sizeof(DirectoryEntry);
     dirp->dirEntryPosition = 0;
-    dirp->directory = loadDir(&(ppi->parent[ppi->lastElementIndex]));
-
+    dirp->directory = thisDir;
     struct fs_diriteminfo * di = malloc(sizeof(di));
     if (di == NULL) {
         return NULL;
@@ -213,7 +214,6 @@ int fs_closedir(fdDir *dirp){
         return -1;
     }
 
-    free(dirp->directory);
     free(dirp->di);
     free(dirp);
     return 0;
