@@ -117,12 +117,13 @@ int fs_mkdir(const char *pathname, mode_t mode) {
     if (ppi.parent->location == root->location) {
         root = ppi.parent;
     }
-
-    if (ppi.parent->location == cwd->location) {
+    else if (ppi.parent->location == cwd->location) {
         cwd = ppi.parent;
     }
+    else {
+        free(ppi.parent);
+    }
 
-    free(ppi.parent);
     free(newDir);
     free(mutablePath);
 
@@ -260,8 +261,12 @@ struct fs_diriteminfo *fs_readdir(fdDir *dirp)
 // TO DO: ERROR CHECKING AND FREE BUFFERS
 int fs_delete(char* filename) {
     ppInfo* ppi = malloc(sizeof(ppInfo));
-    ppi->parent = malloc(sizeof(DirectoryEntry));
-    parsePath(filename, ppi);
+
+    char* path = strdup(filename);
+    if (path == NULL) {
+        return -1;
+    }
+    parsePath(path, ppi);
 
     // Storing ppi into variables
     int index = ppi->lastElementIndex;
@@ -288,8 +293,11 @@ int fs_delete(char* filename) {
 
 int fs_rmdir(const char *pathname) {
     ppInfo* ppi = malloc(sizeof(ppInfo));
-    ppi->parent = malloc(sizeof(DirectoryEntry));
-    parsePath(pathname, ppi);
+    char* path = strdup(pathname);
+    if (path == NULL) {
+        return -1;
+    }
+    parsePath(path, ppi);
 
     int index = ppi->lastElementIndex;
     int locationOfDir = ppi->parent[index].location;
