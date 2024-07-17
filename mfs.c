@@ -19,7 +19,6 @@ int fs_setcwd(char *pathname) {
         return 0;
     }
 
-    //This is for non root directory [TO-DO]
     DirectoryEntry* temp = loadDir(&(ppi->parent[ppi->lastElementIndex]));
     if (temp == NULL) {
         free(ppi);
@@ -36,7 +35,7 @@ int fs_setcwd(char *pathname) {
     }
 
     cwdPathName = strdup(ppi->lastElement);
-    printf("CwdPathName: %s\n", cwdPathName);
+    writeBlock(cwd, (cwd->size + vcb->blockSize - 1) / vcb->blockSize, cwd->location);
 
     return 0;
 }
@@ -103,12 +102,12 @@ int fs_mkdir(const char *pathname, mode_t mode) {
 }
 
 int fs_stat(const char *path, struct fs_stat *buf) {
-    ppInfo* ppi = malloc(sizeof(ppInfo));
+    // ppInfo* ppi = malloc(sizeof(ppInfo));
     
-    int ret = parsePath(path, ppi);
-    if (ret == -1) {
-        return -1;
-    }
+    // int ret = parsePath(path, ppi);
+    // if (ret == -1) {
+    //     return -1;
+    // }
 
     printf("path: %s\n", path);
 

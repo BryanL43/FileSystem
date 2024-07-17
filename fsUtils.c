@@ -87,45 +87,56 @@ int parsePath(char* path, ppInfo* ppi) {
         return -1;
     }
 
-    DirectoryEntry* start;
+    DirectoryEntry* parent;
     if (path[0] == '/') {
-        start = root;
+        parent = root;
     } else {
-        start = cwd; //breakpoint pls verify!!!
+        parent = cwd;
     }
 
-    DirectoryEntry* parent = start;
+    DirectoryEntry* currentDir = loadDir(parent);
+    if (currentDir == NULL) {
+        return -1;
+    }
+
     char* saveptr;
     char* token1 = strtok_r(path, "/", &saveptr);
     if (token1 == NULL) { // Special case "/"
         ppi->parent = parent;
         ppi->lastElement = NULL;
         ppi->lastElementIndex = -2; // special sentinel
+        free(currentDir);
         return 0;
     }
 
     char* token2;
     do {
         ppi->lastElement = token1;
-        ppi->lastElementIndex = findNameInDir(parent, token1);
-        
+        ppi->lastElementIndex = findNameInDir(currentDir, token1);
+
         token2 = strtok_r(NULL, "/", &saveptr);
         if (token2 == NULL) {
-            ppi->parent = loadDir(parent);
+            ppi->parent = currentDir;
             return 0;
         }
 
         if (ppi->lastElementIndex < 0) { // Name doesn't exist (Invalid path)
+            free(currentDir);
             return -1;
         }
 
-        if (ppi->parent[ppi->lastElementIndex].isDirectory != 'd') {
+        if (currentDir[ppi->lastElementIndex].isDirectory != 'd') {
+            free(currentDir);
             return -1;
         }
 
-        DirectoryEntry* temp = loadDir(&(ppi->parent[ppi->lastElementIndex]));
-        free(ppi->parent);
-        ppi->parent = temp;
+        DirectoryEntry* temp = loadDir(&(currentDir[ppi->lastElementIndex]));
+        if (temp == NULL) {
+            free(currentDir);
+            return -1;
+        }
+        free(currentDir);
+        currentDir = temp;
         token1 = token2;
     } while (token2 != NULL);
 
