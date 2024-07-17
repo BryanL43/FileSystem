@@ -42,25 +42,39 @@ int fs_mkdir(const char *pathname, mode_t mode) {
 
     int ret = parsePath(mutablePath, &ppi);
     if (ret < 0) { // Error case
+        free(mutablePath);
         return ret;
     }
 
     if (ppi.lastElementIndex != -1) { // directory already exist
+        free(mutablePath);
         return -2;
-    }
-    
-    DirectoryEntry* newDir = initDirectory(DEFAULT_DIR_SIZE, ppi.parent);
-
-    int vacantDE = findUnusedDE(ppi.parent);
-    if (vacantDE == -1) {
-        free(newDir);
-        return -1;
     }
 
     DirectoryEntry* parentDirectory = loadDir(ppi.parent);
+    if (parentDirectory == NULL) {
+        free(mutablePath);
+        return -1;
+    }
     
+    DirectoryEntry* newDir = initDirectory(DEFAULT_DIR_SIZE, ppi.parent);
+    if (newDir == NULL) {
+        free(parentDirectory);
+        free(mutablePath);
+        return -1;
+    }
+
+    int vacantDE = findUnusedDE(parentDirectory);
+    if (vacantDE == -1) {
+        free(newDir);
+        free(parentDirectory);
+        free(mutablePath);
+        return -1;
+    }
+
     memcpy(&(parentDirectory[vacantDE]), newDir, sizeof(DirectoryEntry));
     strncpy(parentDirectory[vacantDE].name, ppi.lastElement, sizeof(parentDirectory->name));
+
     writeBlock(parentDirectory, parentDirectory->size / vcb->blockSize, parentDirectory->location);
 
     free(parentDirectory);
@@ -73,15 +87,17 @@ int fs_mkdir(const char *pathname, mode_t mode) {
 int fs_isDir(char* path) 
 {
     ppInfo* ppi = malloc(sizeof(ppInfo));
-    if (ppi == NULL)
+    if (ppi == NULL) {
         return -1;
+    }
+    
     ppi->parent = malloc(sizeof(DirectoryEntry));
     if(ppi->parent == NULL) {
         free(ppi);
         return -1;
     }
-    if (parsePath(path, ppi) != 0) 
-    {
+
+    if (parsePath(path, ppi) != 0) {
         free(ppi->parent);
         free(ppi);        
         return 0;
@@ -89,8 +105,7 @@ int fs_isDir(char* path)
 
     DirectoryEntry* dir = loadDir(ppi->parent);
 
-    if(dir[ppi->lastElementIndex].isDirectory == 'd') 
-    {
+    if(dir[ppi->lastElementIndex].isDirectory == 'd') {
         free(dir);
         free(ppi);
         return 1;
@@ -99,6 +114,7 @@ int fs_isDir(char* path)
     free(dir);
     free(ppi->parent);
     free(ppi);
+
     return 0;
 }
 
@@ -106,10 +122,11 @@ int fs_isFile(char* path) {
     return !fs_isDir;
 }
 
-struct fs_diriteminfo *fs_readdir(fdDir *dirp)
-{
-    if(dirp == NULL) 
+struct fs_diriteminfo *fs_readdir(fdDir *dirp) {
+    if(dirp == NULL) {
         return NULL;
+    }
+
     if(dirp->dirEntryPosition > dirp->d_reclen) {
         return NULL;
     }
@@ -122,5 +139,6 @@ struct fs_diriteminfo *fs_readdir(fdDir *dirp)
     strcpy(dirp->di->d_name, dirp->directory[pos].name);
     
     dirp->dirEntryPosition += 1;
+
     return dirp->di;
 }
