@@ -46,7 +46,7 @@ int findUnusedDE(DirectoryEntry* directory) {
     if (directory == NULL) {
         return -2;
     }
-
+    
     for (int i = 0; i < directory->size / sizeof(DirectoryEntry); i++) {
         printf("%s\t: %i\n", directory[i].name, directory[i].location);
         if (directory[i].location == -1) {
@@ -67,7 +67,7 @@ int findUnusedDE(DirectoryEntry* directory) {
 */
 int findNameInDir(DirectoryEntry* directory, char* name) {
     if (directory == NULL || name == NULL) {
-        return -2;
+        return -1;
     }
 
     int numEntries = directory->size / sizeof(DirectoryEntry);
