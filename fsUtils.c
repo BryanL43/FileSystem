@@ -161,19 +161,3 @@ int parsePath(char* path, ppInfo* ppi) {
 
     return 0;
 }
-
-/**
- * Checks if the directory is empty or not
- * 
- * @param dir the directory that is being checked
- * 
- * @return -1 if not empty, 1 if empty
-*/
-int isDirEmpty(DirectoryEntry *dir) {
-    for (int i = 2; i < dir->size / sizeof(DirectoryEntry); i++) {
-        if (dir[i].location > 0) {
-            return -1;
-        }
-    }
-    return 0;
-}
