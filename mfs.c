@@ -5,7 +5,6 @@
 
 int fs_setcwd(char *pathname) {
     ppInfo* ppi = malloc(sizeof(ppInfo));
-    ppi->parent = malloc(sizeof(DirectoryEntry));
 
     int ret = parsePath(pathname, ppi);
     if (ret == -1 || ppi->lastElementIndex == -1) { // parsePath return error
@@ -86,7 +85,15 @@ int fs_mkdir(const char *pathname, mode_t mode) {
     memcpy(&(ppi.parent[vacantDE]), newDir, sizeof(DirectoryEntry));
     strncpy(ppi.parent[vacantDE].name, ppi.lastElement, sizeof(ppi.parent->name));
 
-    writeBlock(ppi.parent, ppi.parent->size / vcb->blockSize, ppi.parent->location);
+    writeBlock(ppi.parent, (ppi.parent->size + vcb->blockSize - 1) / vcb->blockSize, ppi.parent->location);
+
+    if (ppi.parent->location == root->location) {
+        root = ppi.parent;
+    }
+
+    if (ppi.parent->location == cwd->location) {
+        cwd = ppi.parent;
+    }
 
     free(ppi.parent);
     free(newDir);
@@ -97,14 +104,13 @@ int fs_mkdir(const char *pathname, mode_t mode) {
 
 // int fs_stat(const char *path, struct fs_stat *buf) {
 //     ppInfo* ppi = malloc(sizeof(ppInfo));
-//     ppi->parent = malloc(sizeof(DirectoryEntry));
     
 //     int ret = parsePath(path, ppi);
 //     if (ret == -1) {
 //         return -1;
 //     }
 
-
+//     printf("path: %s\n", path);
 // }
 
 int fs_isDir(char* path) 
@@ -134,6 +140,57 @@ int fs_isDir(char* path)
 
 int fs_isFile(char* path) {
     return !fs_isDir;
+}
+
+fdDir * fs_opendir(const char *pathname){
+
+    ppInfo* ppi = malloc(sizeof(ppInfo));
+    if (ppi == NULL) {
+        return NULL;
+    }
+
+    char* path = strdup(pathname);
+    if (path == NULL) {
+        return NULL;
+    }
+
+    int valid = parsePath(path, ppi);
+
+    if (!valid)
+    {
+        return NULL;
+    }
+    
+    fdDir *dirp = malloc(sizeof(dirp));
+    if (dirp == NULL) {
+        return NULL;
+    }
+
+
+    dirp->d_reclen = ppi->parent[ppi->lastElementIndex].size / sizeof(DirectoryEntry);
+    dirp->dirEntryPosition = 0;
+    dirp->directory = loadDir(&(ppi->parent[ppi->lastElementIndex]));
+
+    struct fs_diriteminfo * di = malloc(sizeof(di));
+    if (di == NULL) {
+        return NULL;
+    }
+
+    dirp->di = di;
+    return dirp;
+
+}
+
+int fs_closedir(fdDir *dirp){
+
+    if(dirp == NULL){
+        return -1;
+    }
+
+    free(dirp->directory);
+    free(dirp->di);
+    free(dirp);
+    return 0;
 }
 
 struct fs_diriteminfo *fs_readdir(fdDir *dirp)
