@@ -3,6 +3,8 @@
 #include "directory.h"
 #include "fsUtils.h"
 
+#define ROOT -2
+
 int fs_setcwd(char *pathname) {
     ppInfo ppi;
 
@@ -107,6 +109,7 @@ int fs_mkdir(const char *pathname, mode_t mode) {
     }
 
     memcpy(&(ppi.parent[vacantDE]), newDir, sizeof(DirectoryEntry));
+    //readBlock(&(ppi.parent[vacantDE]), 1, newDir->location);
     strncpy(ppi.parent[vacantDE].name, ppi.lastElement, sizeof(ppi.parent->name));
 
     writeBlock(ppi.parent, (ppi.parent->size + vcb->blockSize - 1) / vcb->blockSize, ppi.parent->location);
@@ -192,9 +195,14 @@ fdDir * fs_opendir(const char *pathname){
         return NULL;
     }
 
+    if (ppi->lastElementIndex == ROOT)
+    {
+        ppi->lastElementIndex = 0;
+    }
+    
 //   DirectoryEntry * thisDir = root ;
 //   DirectoryEntry * thisDir = loadDir(&(ppi->parent));
-    DirectoryEntry * thisDir = (ppi->parent);
+    DirectoryEntry * thisDir = loadDir(&(ppi->parent[ppi->lastElementIndex]));
     dirp->d_reclen = thisDir->size / sizeof(DirectoryEntry);
     dirp->dirEntryPosition = 0;
     dirp->directory = thisDir;
@@ -210,13 +218,15 @@ fdDir * fs_opendir(const char *pathname){
 
 int fs_closedir(fdDir *dirp){
 
-    if(dirp == NULL){
-        return -1;
-    }
-
+    // if(dirp == NULL){
+    //     return -1;
+    // }
+//	free(dirp->directory);
     free(dirp->di);
-    free(dirp);
-    return 0;
+	free(dirp);
+
+    dirp = NULL;
+    return 1;
 }
 
 struct fs_diriteminfo *fs_readdir(fdDir *dirp)
