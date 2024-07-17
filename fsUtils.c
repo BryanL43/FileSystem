@@ -52,7 +52,8 @@ int findUnusedDE(DirectoryEntry* directory) {
             return i;
         }
     }
-    return -1;
+    
+    return expand_directory(directory);
 }
 
 /**

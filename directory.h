@@ -39,6 +39,8 @@ typedef struct DirectoryEntry
 
 DirectoryEntry *initDirectory(int minEntries, DirectoryEntry *parent);
 
+int expand_directory(DirectoryEntry* directory);
+
 extern DirectoryEntry* root;
 extern DirectoryEntry* cwd;
 extern char* cwdPathName;

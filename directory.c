@@ -80,3 +80,8 @@ DirectoryEntry *initDirectory(int minEntries, DirectoryEntry *parent)
 
     return DEs;
 }
+
+
+int expand_directory(DirectoryEntry* directory) {
+    return -1;
+}  

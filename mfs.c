@@ -204,9 +204,12 @@ fdDir * fs_opendir(const char *pathname){
 //   DirectoryEntry * thisDir = root ;
 //   DirectoryEntry * thisDir = loadDir(&(ppi->parent));
     DirectoryEntry * thisDir = loadDir(&(ppi->parent[ppi->lastElementIndex]));
-    dirp->d_reclen = thisDir->size / sizeof(DirectoryEntry);
-    dirp->dirEntryPosition = 0;
     dirp->directory = thisDir;
+    dirp->dirEntryPosition = 0;
+    dirp->d_reclen = 0;
+    for(int i = 0; i < thisDir->size / sizeof(DirectoryEntry); i++)
+        if(dirp->directory[i].location != -1)
+            dirp->d_reclen++;
     struct fs_diriteminfo * di = malloc(sizeof(di));
     if (di == NULL) {
         return NULL;
@@ -222,7 +225,7 @@ int fs_closedir(fdDir *dirp){
     // if(dirp == NULL){
     //     return -1;
     // }
-//	free(dirp->directory);
+    //	free(dirp->directory);
     free(dirp->di);
 	free(dirp);
 
@@ -236,7 +239,7 @@ struct fs_diriteminfo *fs_readdir(fdDir *dirp)
         return NULL;
 
     // Past the end of the number of directories
-    if(dirp->dirEntryPosition > dirp->d_reclen) {
+    if(dirp->dirEntryPosition >= dirp->d_reclen) {
         return NULL;
     }
     
