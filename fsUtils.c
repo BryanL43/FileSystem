@@ -18,7 +18,7 @@
  * Load a directory
  * 
  * @param directory the parent directory to be loaded.
- * @return the loaded directory which **needs to be freed**.
+ * @return the loaded directory which **needs to be freed** or NULL if failed.
 */
 DirectoryEntry* loadDir(DirectoryEntry* directory) {
     int location = directory->location;
@@ -109,15 +109,19 @@ int parsePath(char* path, ppInfo* ppi) {
     
     char* token2 = strtok_r(NULL, "/", &saveptr);
     if (token2 == NULL) {
-        ppi->parent = parent;
+        ppi->parent = loadDir(parent);
         return 0;
     }
 
     if (ppi->lastElementIndex < 0) { // Name doesn't exist (Invalid path)
         return -1;
     }
+    
+    printf("IS dir: %d\n", parent[ppi->lastElementIndex].isDirectory == 'd');
 
-    //Not finished
+    // if (!entryIsDir(parent, ppi->lastElementIndex)) { // Entry is not directory (Invalid path)
+    //     return -1
+    // }
 
     return 0;
 }
