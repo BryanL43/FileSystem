@@ -5,11 +5,10 @@
 
 int fs_setcwd(char *pathname) {
     ppInfo* ppi = malloc(sizeof(ppInfo));
-    ppi->parent = malloc(DirectoryEntry);
+    ppi->parent = malloc(sizeof(DirectoryEntry));
 
     int ret = parsePath(pathname, ppi);
     if (ret == -1 || ppi->lastElementIndex == -1) { // parsePath return error
-        free(ppi->parent);
         free(ppi);
         return -1;
     }
@@ -17,7 +16,6 @@ int fs_setcwd(char *pathname) {
     if (ppi->lastElementIndex == -2) { // Special "root" case
         cwd = loadDir(&root[0]);
         strcpy(cwdPathName, "/");
-        free(ppi->parent);
         free(ppi);
         return 0;
     }
@@ -43,7 +41,6 @@ int fs_mkdir(const char *pathname, mode_t mode) {
     }
 
     int ret = parsePath(mutablePath, &ppi);
-    free(mutablePath);
     if (ret < 0) { // Error case
         return ret;
     }
@@ -60,15 +57,15 @@ int fs_mkdir(const char *pathname, mode_t mode) {
         return -1;
     }
 
-    DirectoryEntry* x = loadDir(ppi.parent);
+    DirectoryEntry* parentDirectory = loadDir(ppi.parent);
     
-    memcpy(&(x[vacantDE]), newDir, sizeof(DirectoryEntry));
-    strcpy(x[vacantDE].name, ppi.lastElement);
+    memcpy(&(parentDirectory[vacantDE]), newDir, sizeof(DirectoryEntry));
+    strncpy(parentDirectory[vacantDE].name, ppi.lastElement, sizeof(parentDirectory->name));
+    writeBlock(parentDirectory, parentDirectory->size / vcb->blockSize, parentDirectory->location);
 
-    writeBlock(x, x->size / vcb->blockSize, x->location);
-    free(x);
+    free(parentDirectory);
     free(newDir);
-    //Need Free if not working dir here!!! [TO-DO]
+    free(mutablePath);
 
     return 0;
 }

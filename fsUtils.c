@@ -117,5 +117,7 @@ int parsePath(char* path, ppInfo* ppi) {
         return -1;
     }
 
+    //Not finished
+
     return 0;
 }

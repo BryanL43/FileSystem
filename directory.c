@@ -41,7 +41,7 @@ DirectoryEntry *initDirectory(int minEntries, DirectoryEntry *parent)
         time_t currentTime = time(NULL);
         DEs[i].dateCreated = currentTime;
         DEs[i].dateModified = currentTime;
-        strcpy(DEs[i].name, "");
+        strncpy(DEs[i].name, "", sizeof(DEs->name));
         DEs[i].isDirectory = ' ';
         DEs[i].size = 0;
         DEs[i].location = -1;
@@ -58,7 +58,7 @@ DirectoryEntry *initDirectory(int minEntries, DirectoryEntry *parent)
     // Initialize "."
     DEs[0].location = newLoc;
     DEs[0].size = bytesToAlloc;
-    strcpy(DEs[0].name, ".");
+    strncpy(DEs[0].name, ".", sizeof(DEs[0].name));
     DEs[0].isDirectory = 'd';
     DEs[0].dateCreated = currentTime;
     DEs[0].dateModified = currentTime;
@@ -71,7 +71,7 @@ DirectoryEntry *initDirectory(int minEntries, DirectoryEntry *parent)
 
     // Copy the parent into the ".." directory
     memcpy(&DEs[1], dotdot, sizeof(DirectoryEntry));
-    strcpy(DEs[1].name, "..");
+    strncpy(DEs[1].name, "..", sizeof(DEs[1].name));
 
     // Write the directory blocks to volume
     if (writeBlock(DEs, blocksNeeded, newLoc) == -1) {
