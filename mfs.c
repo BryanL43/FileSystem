@@ -221,3 +221,64 @@ struct fs_diriteminfo *fs_readdir(fdDir *dirp)
     dirp->dirEntryPosition += 1;
     return dirp->di;
 }
+
+// TO DO: ERROR CHECKING AND FREE BUFFERS
+int fs_delete(char* filename) {
+    ppInfo* ppi = malloc(sizeof(ppInfo));
+    ppi->parent = malloc(sizeof(DirectoryEntry));
+    parsePath(filename, ppi);
+
+    // Storing ppi into variables
+    int index = ppi->lastElementIndex;
+    int locationOfFile = ppi->parent[index].location;
+    int sizeOfFile = (ppi->parent[index].size + vcb->blockSize - 1) / vcb->blockSize;
+    char* emptyBlocks = malloc(sizeOfFile * vcb->blockSize);
+
+    // Deleting the file in disk
+    writeBlock(emptyBlocks, sizeOfFile, locationOfFile);
+
+    // Update the FAT table and write to disk
+    FAT[seekBlock(sizeOfFile, locationOfFile)] = vcb->firstFreeBlock;
+    vcb->firstFreeBlock = locationOfFile;
+
+    int bytesNeeded = vcb->totalBlocks * sizeof(int);
+    int blocksNeeded = (bytesNeeded + vcb->blockSize - 1) / vcb->blockSize;
+    LBAwrite(FAT, blocksNeeded, vcb->freeSpaceLocation);
+
+    // Update new directory with file deleted and write to disk
+    ppi->parent[index].location = -1; // mark DE as unused
+    int sizeOfDirectory = (ppi->parent[0].size + vcb->blockSize - 1) / vcb->blockSize;
+    writeBlock(ppi->parent, sizeOfDirectory, ppi->parent[0].location);
+}
+
+int fs_rmdir(const char *pathname) {
+    ppInfo* ppi = malloc(sizeof(ppInfo));
+    ppi->parent = malloc(sizeof(DirectoryEntry));
+    parsePath(pathname, ppi);
+
+    int index = ppi->lastElementIndex;
+    int locationOfDir = ppi->parent[index].location;
+    int sizeOfDir = (ppi->parent[index].size + vcb->blockSize - 1) / vcb->blockSize;
+    char* emptyBlocks = malloc(sizeOfDir * vcb->blockSize);
+
+    DirectoryEntry* directoryToDelete = loadDir(&(ppi->parent[ppi->lastElementIndex]));
+    if(isDirEmpty(directoryToDelete) == -1) {
+        // When the directory is not empty, return error
+        return -1;
+    }
+
+    // Deleting file in disk
+    writeBlock(emptyBlocks, sizeOfDir, locationOfDir);
+
+    // Update the FAT table and write to disk
+    FAT[seekBlock(sizeOfDir, locationOfDir)] = vcb->firstFreeBlock;
+    vcb->firstFreeBlock = locationOfDir;
+
+    int bytesNeeded = vcb->totalBlocks * sizeof(int);
+    int blocksNeeded = (bytesNeeded + vcb->blockSize - 1) / vcb->blockSize;
+    LBAwrite(FAT, blocksNeeded, vcb->freeSpaceLocation);
+
+    ppi->parent[index].location = -2;
+    int sizeOfDirectory = (ppi->parent[0].size + vcb->blockSize - 1) / vcb->blockSize;
+    writeBlock(ppi->parent, sizeOfDirectory, ppi->parent[0].location);
+}
