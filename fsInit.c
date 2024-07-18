@@ -132,7 +132,7 @@ int initFileSystem(uint64_t numberOfBlocks, uint64_t blockSize)
 
 void exitFileSystem()
 {
-	LBAread(vcb, 1, 0);
+	LBAwrite(vcb, 1, 0);
 	free(vcb);
 	free(FAT);
 	free(root);
