@@ -48,7 +48,6 @@ int findUnusedDE(DirectoryEntry* directory) {
     }
     
     for (int i = 0; i < directory->size / sizeof(DirectoryEntry); i++) {
-        printf("%s\t: %i\n", directory[i].name, directory[i].location);
         if (directory[i].location == -1) {
             return i;
         }

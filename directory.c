@@ -93,10 +93,13 @@ DirectoryEntry* expandDirectory(DirectoryEntry* directory) {
         return NULL;
     }
     memcpy(DEs, directory, directory->size);
+    if (directory->location != root->location && directory->location != cwd->location) {
+        free(directory);
+        directory = NULL;
+    }
+    DEs[0].size *= 2;
     
     time_t currentTime = time(NULL);
-    printf("%i\n", sizeof(&DEs));
-    printf("---%i----\n", oldNumEntries);
     // Initialize each directory entry to a known free state
     for(int i = oldNumEntries; i < actualEntries; i++) {
         DEs[i].dateCreated = currentTime;
@@ -108,18 +111,31 @@ DirectoryEntry* expandDirectory(DirectoryEntry* directory) {
     }
 
     // Request free space for the expanded directory
-    int newLoc = getFreeBlocks(oldNumBlocks, seekBlock(oldNumBlocks - 1, DEs[0].location));
+    int newLoc = getFreeBlocks(oldNumBlocks, seekBlock(oldNumBlocks -1, DEs[0].location));
     if (newLoc == -1) {
         return NULL;
     }
 
     // Write the directory blocks to volume
-    if (writeBlock(DEs, numBlocks, directory->location) == -1) {
+    if (writeBlock(DEs, numBlocks, DEs[0].location) == -1) {
         return NULL;
     }
+    printf("\n");
 
-    for(int i = 0; i < actualEntries; i++) {
-        printf("%i\n", DEs[i].location);
+    for(int i = 0; i < DEs->size / sizeof(DirectoryEntry); i++) {
+        printf("DEs[%i] location : %i\t\t", i, DEs[i].location);
+        printf("DEs[%i] name : %s\n", i, DEs[i].name);
     }
+    printf("\n");
+// NOT WRITING WHHYYYYYYYYY
+    DirectoryEntry* test = loadDir(DEs);
+
+    for(int i = 0; i < test->size / sizeof(DirectoryEntry); i++) {
+        printf("test[%i] location : %i\t\t", i, test[i].location);
+        printf("test[%i] name : %s\n", i, test[i].name);
+    }
+    free(test);
+
+    printf("\n");
     return DEs;
 }  

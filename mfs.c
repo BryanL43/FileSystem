@@ -102,9 +102,7 @@ int fs_mkdir(const char *pathname, mode_t mode) {
     
     int vacantDE = findUnusedDE(ppi.parent);
     if (vacantDE == -1) {
-        printf("Growing directory\n");
         ppi.parent = expandDirectory(ppi.parent);
-        
         vacantDE = findUnusedDE(ppi.parent);
     }
     if (vacantDE < 0) {
