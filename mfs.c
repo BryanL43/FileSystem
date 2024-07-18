@@ -180,7 +180,7 @@ int fs_isDir(char* path)
 }
 
 int fs_isFile(char* path) {
-    return !fs_isDir;
+    return !fs_isDir(path);
 }
 
 fdDir * fs_opendir(const char *pathname){
