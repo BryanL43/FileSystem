@@ -64,8 +64,7 @@ b_io_fd b_getFCB ()
 // Interface to open a buffered file
 // Modification of interface for this assignment, flags match the Linux flags for open
 // O_RDONLY, O_WRONLY, or O_RDWR
-b_io_fd b_open (char * filename, int flags)
-	{
+b_io_fd b_open(char* filename, int flags) {
 	b_io_fd returnFd;
 
 	//*** TODO ***:  Modify to save or set any information needed
@@ -74,11 +73,14 @@ b_io_fd b_open (char * filename, int flags)
 		
 	if (startup == 0) b_init();  //Initialize our system
 	
-	returnFd = b_getFCB();				// get our own file descriptor
-										// check for error - all used FCB's
-	
-	return (returnFd);						// all set
+	returnFd = b_getFCB(); // get our own file descriptor
+	if (returnFD == -1) { // check for error - all used FCB's
+		return returnFD;
 	}
+	
+	
+	return (returnFd); // all set
+}
 
 
 // Interface to seek function	
@@ -149,7 +151,6 @@ int b_read (b_io_fd fd, char * buffer, int count)
 	}
 	
 // Interface to Close the file	
-int b_close (b_io_fd fd)
-	{
-
-	}
+int b_close (b_io_fd fd) {
+	
+}
