@@ -22,6 +22,7 @@ char* normalizePath(const char* pathname);
 DirectoryEntry* loadDir(DirectoryEntry* directory);
 int findUnusedDE(DirectoryEntry* directory);
 int findNameInDir(DirectoryEntry* directory, char* name);
+int isDirEmpty(DirectoryEntry* directory);
 int parsePath(char* path, ppInfo* ppi);
 
 #endif
