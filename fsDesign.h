@@ -29,7 +29,6 @@ typedef struct VCB
    int totalFreeSpace;     // total free blocks
 
    int rootLocation;       // location to root directory
-   int rootSize;           // size of root directory
 } VCB;
 
 typedef struct ppInfo {

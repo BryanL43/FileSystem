@@ -77,20 +77,20 @@ int initFileSystem(uint64_t numberOfBlocks, uint64_t blockSize)
         LBAread(FAT, blocksNeeded, vcb->freeSpaceLocation);
 
 		// Instantiate and load root directory
-		root = malloc(vcb->rootSize * blockSize);
+		root = malloc(vcb->blockSize);
 		if (root == NULL) {
 			free(vcb);
 			free(FAT);
 			return -1;
 		}
 
-		if (LBAread(root, vcb->rootSize, vcb->rootLocation) < 0) {
+		if (LBAread(root, 1, vcb->rootLocation) < 0) {
 			free(vcb);
 			free(FAT);
 			free(root);
 			return -1;
 		}
-		
+		root = loadDir(root); // MEMORY LEAK
 	} else { //Case: File system is not yet initialized
 		vcb->signature = SIGNATURE;
 		vcb->blockSize = blockSize;
@@ -113,7 +113,6 @@ int initFileSystem(uint64_t numberOfBlocks, uint64_t blockSize)
 
 		// Update root information in VCB
 		vcb->rootLocation = root->location;
-		vcb->rootSize = (root->size + blockSize - 1) / blockSize;
 
 		// Write the VCB to the volume
 		if (LBAwrite(vcb, 1, 0) == -1) {
