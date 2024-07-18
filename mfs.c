@@ -86,13 +86,24 @@ int fs_mkdir(const char *pathname, mode_t mode) {
         free(mutablePath);
         return -1;
     }
+    int vacantDE = findUnusedDE(ppi.parent);
+    if (vacantDE == -1) {
+        ppi.parent = expandDirectory(ppi.parent);
+        vacantDE = findUnusedDE(ppi.parent);
+    }
+
+    if (vacantDE < 0) {
+        freeDirectory(ppi.parent);
+        free(mutablePath);
+        return -1;
+    }  
 
     if (ppi.lastElementIndex != -1) { // directory already exist
         free(mutablePath);
         freeDirectory(ppi.parent);
         return -2;
     }
-    
+
     DirectoryEntry* newDir = initDirectory(DEFAULT_DIR_SIZE, ppi.parent);
     if (newDir == NULL) {
         free(mutablePath);
@@ -100,23 +111,12 @@ int fs_mkdir(const char *pathname, mode_t mode) {
         return -1;
     }
     
-    int vacantDE = findUnusedDE(ppi.parent);
-    if (vacantDE == -1) {
-        ppi.parent = expandDirectory(ppi.parent);
-        vacantDE = findUnusedDE(ppi.parent);
-    }
-    if (vacantDE < 0) {
-        freeDirectory(ppi.parent);
-        freeDirectory(newDir);
-        free(mutablePath);
-        return -1;
-    }
-
     memcpy(&(ppi.parent[vacantDE]), newDir, sizeof(DirectoryEntry));
     //readBlock(&(ppi.parent[vacantDE]), 1, newDir->location);
     strncpy(ppi.parent[vacantDE].name, ppi.lastElement, sizeof(ppi.parent->name));
 
     writeBlock(ppi.parent, (ppi.parent->size + vcb->blockSize - 1) / vcb->blockSize, ppi.parent->location);
+
 
     if (ppi.parent->location == root->location) {
         root = ppi.parent;

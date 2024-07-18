@@ -117,23 +117,7 @@ DirectoryEntry* expandDirectory(DirectoryEntry* directory) {
     if (writeBlock(DEs, numBlocks, DEs[0].location) == -1) {
         return NULL;
     }
-    printf("\n");
 
-    for(int i = 0; i < DEs->size / sizeof(DirectoryEntry); i++) {
-        printf("DEs[%i] location : %i\t\t", i, DEs[i].location);
-        printf("DEs[%i] name : %s\n", i, DEs[i].name);
-    }
-    printf("\n");
-// NOT WRITING WHHYYYYYYYYY
-    DirectoryEntry* test = loadDir(DEs);
-
-    for(int i = 0; i < test->size / sizeof(DirectoryEntry); i++) {
-        printf("test[%i] location : %i\t\t", i, test[i].location);
-        printf("test[%i] name : %s\n", i, test[i].name);
-    }
-    freeDirectory(test);
-
-    printf("\n");
     return DEs;
 }  
 
@@ -142,4 +126,18 @@ void freeDirectory(DirectoryEntry* dir) {
         free(dir);
         dir = NULL;
     }
+}
+
+void printDirFromMemory(DirectoryEntry* dir) {
+    for(int i = 0; i < dir->size / sizeof(DirectoryEntry); i++) {
+        printf("test[%i] location : %i\t\t", i, dir[i].location);
+        printf("test[%i] name : %s\n", i, dir[i].name);
+    }
+    printf("\n");
+}
+
+void printDirFromDisk(DirectoryEntry* dir) {
+    DirectoryEntry* test = loadDir(dir);
+    printDirFromMemory(test);
+    freeDirectory(test);
 }
