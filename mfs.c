@@ -221,7 +221,6 @@ int fs_closedir(fdDir *dirp){
     //	free(dirp->directory);
     free(dirp->di);
 	free(dirp);
-    freeDirectory(dirp->directory);
 
     dirp = NULL;
     return 1;
