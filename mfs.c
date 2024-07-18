@@ -132,14 +132,31 @@ int fs_mkdir(const char *pathname, mode_t mode) {
 }
 
 int fs_stat(const char *path, struct fs_stat *buf) {
-    // ppInfo* ppi = malloc(sizeof(ppInfo));
-    
-    // int ret = parsePath(path, ppi);
-    // if (ret == -1) {
-    //     return -1;
-    // }
+    ppInfo ppi;
 
-    printf("path: %s\n", path);
+    // Make a mutable copy of the pathname (discards const for warning issue)
+    char* mutablePath = strdup(path);
+    if (mutablePath == NULL) {
+        return -1;
+    }
+    
+    int ret = parsePath(mutablePath, &ppi);
+    if (ret == -1) {
+        free(mutablePath);
+        return -1;
+    }
+
+    int index = findNameInDir(ppi.parent, ppi.lastElement);
+    if (index == -1) {
+        free(mutablePath);
+        return -1;
+    }
+
+    buf->st_size = ppi.parent[index].size;
+    buf->st_blksize = vcb->blockSize;
+    buf->st_blocks = (ppi.parent->size + vcb->blockSize - 1) / vcb->blockSize;
+    buf->st_createtime = ppi.parent->dateCreated;
+    buf->st_modtime = ppi.parent->dateModified;
 
     return 0;
 }
