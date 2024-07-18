@@ -15,6 +15,123 @@
 #include "fsUtils.h"
 
 /**
+ * Sanitize path for pwd.
+ * 
+ * @param pathname the path name.
+ * @return the sanitized absolute path or NULL on failure.
+*/
+char* normalizePath(const char* pathname) {
+    int capacity = 10;
+    char** pathArray = malloc(sizeof(char*) * capacity);
+    if (pathArray == NULL) {
+        return NULL;
+    }
+
+    // Make a mutable copy of the pathname (discards const for warning issue)
+    char* mutablePath = strdup(pathname);
+    if (mutablePath == NULL) {
+        free(pathArray);
+        return NULL;
+    }
+
+    char* saveptr;
+    char* token = strtok_r(mutablePath, "/", &saveptr);
+    int size = 0;
+
+    while (token != NULL) {
+        // Expand pathArray if it gets full
+        if (size >= capacity) {
+            capacity *= 2;
+            char** temp = realloc(pathArray, sizeof(char*) * capacity);
+            if (temp == NULL) { // clear pathArray on realloc failure
+                for (int i = 0; i < size; i++) {
+                    free(pathArray[i]);
+                }
+                free(pathArray);
+                free(mutablePath);
+                return NULL;
+            }
+            pathArray = temp;
+        }
+
+        // Parse each individual component of path
+        pathArray[size] = strdup(token);
+        if (pathArray[size] == NULL) { // Handle memory allocation failure
+            for (int i = 0; i < size; i++) {
+                free(pathArray[i]);
+            }
+            free(pathArray);
+            free(mutablePath);
+            return NULL;
+        }
+        size++;
+        
+        token = strtok_r(NULL, "/", &saveptr);
+    }
+
+    int* indexToKeep = malloc(sizeof(int) * size);
+    if (indexToKeep == NULL) { // Handle memory allocation failure
+        for (int i = 0; i < size; i++) {
+            free(pathArray[i]);
+        }
+        free(pathArray);
+        free(mutablePath);
+        return NULL;
+    }
+
+    // Determine which index of path arguments we should keep
+    int index = 0;
+    for (int i = 0; i < size; i++) {
+        if (strcmp(pathArray[i], ".") == 0) {
+            // Do nothing for current directory
+        } else if (strcmp(pathArray[i], "..") == 0) {
+            if (index > 0) {
+                index--;
+            }
+        } else {
+            indexToKeep[index++] = i;
+        }
+    }
+
+    // Create return string buffer
+    int returnLength = 2;
+    for (int i = 0; i < index; i++) {
+        returnLength += strlen(pathArray[indexToKeep[i]]) + 1;
+    }
+
+    char* returnString = malloc(returnLength);
+    if (returnString == NULL) { // Handle memory allocation failure
+        for (int i = 0; i < size; i++) {
+            free(pathArray[i]);
+        }
+        free(pathArray);
+        free(indexToKeep);
+        free(mutablePath);
+        return NULL;
+    }
+
+    // Merge the individual path arguments to form the sanitized absolute path
+    strcpy(returnString, "/");
+    for (int i = 0; i < index; i++) {
+        strcat(returnString, pathArray[indexToKeep[i]]);
+        if (i < index - 1) {
+            strcat(returnString, "/");
+        }
+    }
+    strcat(returnString, "/"); // Append "/" to end of path
+
+    // Release resources
+    for (int i = 0; i < size; i++) {
+        free(pathArray[i]);
+    }
+    free(pathArray);
+    free(indexToKeep);
+    free(mutablePath);
+    
+    return returnString;
+}
+
+/**
  * Load a directory
  * 
  * @param directory the parent directory to be loaded.
@@ -107,6 +224,13 @@ int parsePath(char* path, ppInfo* ppi) {
         return -1;
     }
 
+    // Make a mutable copy of the pathname (discards const for warning issue)
+    // Strict enforcement for strtok_r to not alter path
+    char* mutablePath = strdup(path);
+    if (mutablePath == NULL) {
+        return -1;
+    }
+
     DirectoryEntry* parent;
     if (path[0] == '/') {
         parent = root;
@@ -116,15 +240,17 @@ int parsePath(char* path, ppInfo* ppi) {
 
     DirectoryEntry* currentDir = loadDir(parent);
     if (currentDir == NULL) {
+        free(mutablePath);
         return -1;
     }
 
     char* saveptr;
-    char* token1 = strtok_r(path, "/", &saveptr);
+    char* token1 = strtok_r(mutablePath, "/", &saveptr);
     if (token1 == NULL) { // Special case "/"
         ppi->parent = parent;
         ppi->lastElement = NULL;
         ppi->lastElementIndex = -2; // special sentinel
+        free(mutablePath);
         freeDirectory(currentDir);
         return 0;
     }
@@ -141,17 +267,20 @@ int parsePath(char* path, ppInfo* ppi) {
         }
 
         if (ppi->lastElementIndex < 0) { // Name doesn't exist (Invalid path)
+            free(mutablePath);
             freeDirectory(currentDir);
             return -1;
         }
 
         if (currentDir[ppi->lastElementIndex].isDirectory != 'd') {
+            free(mutablePath);
             freeDirectory(currentDir);
             return -1;
         }
 
         DirectoryEntry* temp = loadDir(&(currentDir[ppi->lastElementIndex]));
         if (temp == NULL) {
+            free(mutablePath);
             freeDirectory(currentDir);
             return -1;
         }

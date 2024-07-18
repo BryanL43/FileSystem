@@ -26,41 +26,34 @@ int fs_setcwd(char *pathname) {
     if (temp == NULL) {
         return -1;
     }
-    printf("tempsize: %d\n", temp->size);
     memcpy(cwd, temp, temp->size);
-
+    
     // Determine the new path name
-    int newPathLen = strlen(ppi.lastElement) + 2;
-    char *newPath;
-
+    char* newPath;
     if (pathname[0] == '/') { // Absolute path
-        // Copy the absolute path and append a slash
-        int pathLen = strlen(pathname) + 2;
-        newPath = malloc(pathLen);
+        newPath = strdup(pathname);
         if (newPath == NULL) {
-            free(cwd);
+            fprintf(stderr, "Fatal: insufficient memory for strdup!\n");
             return -1;
         }
-        strcpy(newPath, pathname);
-        if (newPath[strlen(newPath) - 1] != '/') {
-            strcat(newPath, "/");
-        }
     } else { // Relative path
-        // Copy the current path and append the new path
-        int currentPathLen = strlen(cwdPathName);
-        newPath = malloc(currentPathLen + newPathLen);
+        int newPathLen = strlen(cwdPathName) + strlen(pathname) + 2;
+        newPath = malloc(newPathLen);
         if (newPath == NULL) {
-            free(cwd);
+            fprintf(stderr, "Fatal: insufficient memory for newPath malloc!\n");
             return -1;
         }
         strcpy(newPath, cwdPathName);
-        strcat(newPath, ppi.lastElement);
-        if (newPath[strlen(newPath) - 1] != '/') {
+
+        // Append "/" to end of path
+        strcat(newPath, pathname);
+        if (newPath[strlen(cwdPathName)] != '/') {
             strcat(newPath, "/");
         }
     }
 
-    cwdPathName = newPath;
+    cwdPathName = normalizePath(newPath);
+    free(newPath);
 
     writeBlock(cwd, (cwd->size + vcb->blockSize - 1) / vcb->blockSize, cwd->location);
     free(temp);

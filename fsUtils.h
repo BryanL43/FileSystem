@@ -18,6 +18,7 @@
 #include "directory.h"
 #include "fsDesign.h"
 
+char* normalizePath(const char* pathname);
 DirectoryEntry* loadDir(DirectoryEntry* directory);
 int findUnusedDE(DirectoryEntry* directory);
 int findNameInDir(DirectoryEntry* directory, char* name);
