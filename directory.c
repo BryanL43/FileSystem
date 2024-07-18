@@ -93,10 +93,7 @@ DirectoryEntry* expandDirectory(DirectoryEntry* directory) {
         return NULL;
     }
     memcpy(DEs, directory, directory->size);
-    if (directory->location != root->location && directory->location != cwd->location) {
-        free(directory);
-        directory = NULL;
-    }
+    freeDirectory(directory);
     DEs[0].size *= 2;
     
     time_t currentTime = time(NULL);
@@ -139,3 +136,10 @@ DirectoryEntry* expandDirectory(DirectoryEntry* directory) {
     printf("\n");
     return DEs;
 }  
+
+void freeDirectory(DirectoryEntry* dir) {
+    if (dir->location != root->location && dir->location != cwd->location) {
+        free(dir);
+        dir = NULL;
+    }
+}

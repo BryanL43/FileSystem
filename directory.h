@@ -41,6 +41,8 @@ DirectoryEntry *initDirectory(int minEntries, DirectoryEntry *parent);
 
 DirectoryEntry* expandDirectory(DirectoryEntry* directory);
 
+void freeDirectory(DirectoryEntry* dir);
+
 extern DirectoryEntry* root;
 extern DirectoryEntry* cwd;
 extern char* cwdPathName;
