@@ -180,7 +180,20 @@ int fs_isDir(char* path)
 }
 
 int fs_isFile(char* path) {
-    return !fs_isDir(path);
+    ppInfo ppi;
+
+    if (parsePath(path, &ppi) != 0) {
+        freeDirectory(ppi.parent);
+        return 0;
+    }
+
+    if(ppi.parent[ppi.lastElementIndex].isDirectory != 'd') {
+        freeDirectory(ppi.parent);
+        return 1;
+    }
+
+    freeDirectory(ppi.parent);
+    return 0;
 }
 
 fdDir * fs_opendir(const char *pathname){
