@@ -93,7 +93,6 @@ int getFreeBlocks(uint64_t numberOfBlocks, uint64_t last_block_in_file) {
     int bytesNeeded = vcb->totalBlocks * sizeof(int);
     int blocksNeeded = (bytesNeeded + vcb->blockSize - 1) / vcb->blockSize;
     LBAwrite(FAT, blocksNeeded, vcb->freeSpaceLocation);
-    LBAwrite(vcb, 1, 0);
 
     return head;
 }
