@@ -131,7 +131,7 @@ DirectoryEntry* expandDirectory(DirectoryEntry* directory) {
         printf("test[%i] location : %i\t\t", i, test[i].location);
         printf("test[%i] name : %s\n", i, test[i].name);
     }
-    free(test);
+    freeDirectory(test);
 
     printf("\n");
     return DEs;

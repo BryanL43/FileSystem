@@ -29,7 +29,7 @@ DirectoryEntry* loadDir(DirectoryEntry* directory) {
 
     int numberOfBlocks = (directory->size + vcb->blockSize - 1) / vcb->blockSize;
     if (readBlock(temp, numberOfBlocks, location) == -1) {
-        free(temp);
+        freeDirectory(temp);
         return NULL;
     }
 
@@ -125,7 +125,7 @@ int parsePath(char* path, ppInfo* ppi) {
         ppi->parent = parent;
         ppi->lastElement = NULL;
         ppi->lastElementIndex = -2; // special sentinel
-        free(currentDir);
+        freeDirectory(currentDir);
         return 0;
     }
 
@@ -141,21 +141,21 @@ int parsePath(char* path, ppInfo* ppi) {
         }
 
         if (ppi->lastElementIndex < 0) { // Name doesn't exist (Invalid path)
-            free(currentDir);
+            freeDirectory(currentDir);
             return -1;
         }
 
         if (currentDir[ppi->lastElementIndex].isDirectory != 'd') {
-            free(currentDir);
+            freeDirectory(currentDir);
             return -1;
         }
 
         DirectoryEntry* temp = loadDir(&(currentDir[ppi->lastElementIndex]));
         if (temp == NULL) {
-            free(currentDir);
+            freeDirectory(currentDir);
             return -1;
         }
-        free(currentDir);
+        freeDirectory(currentDir);
         currentDir = temp;
         token1 = token2;
     } while (token2 != NULL);
