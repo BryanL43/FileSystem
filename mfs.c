@@ -240,34 +240,37 @@ int fs_closedir(fdDir *dirp){
     return 1;
 }
 
-// NOT WORKING RIGHT
 struct fs_diriteminfo *fs_readdir(fdDir *dirp)
 {
-    if(dirp == NULL) 
+    if (dirp == NULL) 
         return NULL;
 
     // Past the end of the number of directories
-    if(dirp->dirEntryPosition >= dirp->d_reclen) {
+    if (dirp->dirEntryPosition >= dirp->directory->size / sizeof(DirectoryEntry)) {
         return NULL;
     }
-    
+
     unsigned short pos = dirp->dirEntryPosition;
 
-    // Get how many directory entries there are in the directory
-    dirp->di->d_reclen = 
-        (dirp->directory[pos].size + sizeof(DirectoryEntry) - 1) 
-        / sizeof(DirectoryEntry);
+    // Find the next valid directory entry
+    while (dirp->directory[pos].location < 0) {
+        pos++;
+    }
 
-    // Determine the file type of the directory entry in the directory
-    dirp->di->fileType = dirp->directory[pos].isDirectory;
 
-    // copy name to the 
-    strcpy(dirp->di->d_name, dirp->directory[pos].name);
+    // Populate the fs_diriteminfo structure
+    dirp->di->d_reclen = (dirp->directory[pos].size + sizeof(DirectoryEntry) - 1) 
+                        / sizeof(DirectoryEntry);
     
-    // giving another fs_diriteminfo so go to the next one
-    dirp->dirEntryPosition++;
+    dirp->di->fileType = dirp->directory[pos].isDirectory;
+    strcpy(dirp->di->d_name, dirp->directory[pos].name);
+
+    // Move to the next directory entry
+    dirp->dirEntryPosition = 1 + pos;
+
     return dirp->di;
 }
+
 
 // TO DO: ERROR CHECKING AND FREE BUFFERS
 int fs_delete(char* filename) {
@@ -333,7 +336,7 @@ int fs_rmdir(const char *pathname) {
     int blocksNeeded = (bytesNeeded + vcb->blockSize - 1) / vcb->blockSize;
     LBAwrite(FAT, blocksNeeded, vcb->freeSpaceLocation);
 
-    ppi.parent[index].location = -2;
+    ppi.parent[index].location = -1; // mark DE as unused
     int sizeOfDirectory = (ppi.parent[0].size + vcb->blockSize - 1) / vcb->blockSize;
     writeBlock(ppi.parent, sizeOfDirectory, ppi.parent[0].location);
     freeDirectory(ppi.parent);
