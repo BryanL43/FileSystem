@@ -86,6 +86,10 @@ int fs_mkdir(const char *pathname, mode_t mode) {
         free(mutablePath);
         return -1;
     }
+
+    DirectoryEntry* test = loadDir(ppi.parent);
+    ppi.parent = test;
+    
     int vacantDE = findUnusedDE(ppi.parent);
     if (vacantDE == -1) {
         ppi.parent = expandDirectory(ppi.parent);
