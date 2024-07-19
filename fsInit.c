@@ -72,9 +72,7 @@ int initFileSystem(uint64_t numberOfBlocks, uint64_t blockSize)
 	// Check if the file system is initialized already
 	if (vcb->signature == SIGNATURE) { // Case: Initialized already
 		// Load the FAT from the storage
-		int bytesNeeded = numberOfBlocks * sizeof(int);
-		int blocksNeeded = (bytesNeeded + blockSize - 1) / blockSize;
-        LBAread(FAT, blocksNeeded, vcb->freeSpaceLocation);
+        LBAread(FAT, vcb->freeSpaceSize, vcb->freeSpaceLocation);
 
 		// Instantiate and load root directory
 		root = malloc(vcb->blockSize);

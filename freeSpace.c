@@ -45,6 +45,7 @@ int initFreeSpace(uint64_t numberOfBlocks, uint64_t blockSize) {
 
     // Assign VCB initial values
     vcb->totalFreeSpace = numberOfBlocks - blocksNeeded - 1; // -1 because of VCB
+    vcb->freeSpaceSize = blocksNeeded;
     vcb->freeSpaceLocation = 1; // FAT table starts at block 1, right after VCB block
     vcb->firstFreeBlock = blocksNeeded + 1;
     
@@ -90,9 +91,7 @@ int getFreeBlocks(uint64_t numberOfBlocks, uint64_t last_block_in_file) {
     vcb->firstFreeBlock = nextBlock;
 
     // Update the FAT table in Volume
-    int bytesNeeded = vcb->totalBlocks * sizeof(int);
-    int blocksNeeded = (bytesNeeded + vcb->blockSize - 1) / vcb->blockSize;
-    LBAwrite(FAT, blocksNeeded, vcb->freeSpaceLocation);
+    LBAwrite(FAT, vcb->freeSpaceSize, vcb->freeSpaceLocation);
 
     return head;
 }

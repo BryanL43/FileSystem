@@ -26,6 +26,7 @@ typedef struct VCB
 
    int freeSpaceLocation;  // location to free space block
    int firstFreeBlock;     // location to the first free block
+   int freeSpaceSize;      // Size of FAT
    int totalFreeSpace;     // total free blocks
 
    int rootLocation;       // location to root directory
