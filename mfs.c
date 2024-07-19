@@ -288,98 +288,104 @@ struct fs_diriteminfo *fs_readdir(fdDir *dirp)
     return dirp->di;
 }
 
-
-// TO DO: ERROR CHECKING AND FREE BUFFERS
-
-// CAN'T CHECK 
 int fs_delete(char* filename) {
-    ppInfo ppi;
-
-    char* path = strdup(filename);
-    if (path == NULL) {
-        return -1;
-    }
-    parsePath(path, &ppi);
-
-    // Storing ppi into variables
-    int index = ppi.lastElementIndex;
-    int locationOfFile = ppi.parent[index].location;
-    int sizeOfFile = (ppi.parent[index].size + vcb->blockSize - 1) / vcb->blockSize;
-
-    // Create an empty buffer to overwrite disk
-    char* emptyBlocks = malloc(sizeOfFile * vcb->blockSize);
-
-    // Deleting the file in disk
-    writeBlock(emptyBlocks, sizeOfFile, locationOfFile);
-
-    // Update the FAT table and write to disk
-    FAT[seekBlock(sizeOfFile, locationOfFile)] = vcb->firstFreeBlock;
-    vcb->firstFreeBlock = locationOfFile;
-
-    LBAwrite(FAT, vcb->freeSpaceSize, vcb->freeSpaceLocation);
-
-    // Update new directory with file deleted and write to disk
-    ppi.parent[index].location = -1; // mark DE as unused
-    int sizeOfDirectory = (ppi.parent[0].size + vcb->blockSize - 1) / vcb->blockSize;
-    writeBlock(ppi.parent, sizeOfDirectory, ppi.parent[0].location);
-    freeDirectory(ppi.parent);
+    // Same as fs_rmdir but can't really test without any files
 }
 
 int fs_rmdir(const char *pathname) {
     ppInfo ppi;
+
+    // Make a mutable copy of the pathname (discards const for warning issue)
     char* path = strdup(pathname);
     if (path == NULL) {
         return -1;
     }
-    parsePath(path, &ppi);
 
+    // Populate ppInfo
+    if (parsePath(path, &ppi) == -1) {
+        free(path);
+        return -1;
+    }
+
+    // Loading ppInfo into variables
     int index = ppi.lastElementIndex;
-
     int locationOfDir = ppi.parent[index].location;
-    
     int sizeOfDir = (ppi.parent[index].size + vcb->blockSize - 1) / vcb->blockSize;
+    if (index < 0 || locationOfDir < 0 || sizeOfDir < 0) {
+        free(path);
+        return -1;
+    }
+
+    // Creating an empty buffer to overwrite contents in disk
     char *emptyBlocks = malloc(sizeOfDir * vcb->blockSize);
-    
+    if (emptyBlocks == NULL) {
+        free(emptyBlocks);
+        free(path);
+        return -1;
+    }
 
-
+    // Load directory for empty check
     DirectoryEntry* directoryToDelete = loadDir(&(ppi.parent[ppi.lastElementIndex]));
     
     if(isDirEmpty(directoryToDelete) == -1) {
         // When the directory is not empty, return error
         printf("Dir is not empty(This printf is printing from mfs).\n");
+        free(emptyBlocks);
+        free(path);
         return -1;
     }
 
     // Deleting dir in disk
-    writeBlock(emptyBlocks, sizeOfDir, locationOfDir);
+    if (writeBlock(emptyBlocks, sizeOfDir, locationOfDir) == -1) {
+        free(emptyBlocks);
+        free(path);
+        return -1;
+    }
 
-    // Update the FAT table and write to disk
-
+    // Special case to determine how to clear sentinel value
     if (sizeOfDir == 1) {
+        // Clearing the sentinel value
         FAT[locationOfDir] = vcb->firstFreeBlock;
         vcb->firstFreeBlock = locationOfDir;
     } else {
-        // Traverse the FAT until it reaches the index before the sentinel value
+        // Traverse the FAT until it reaches the sentinel value
         int endOfDirIndex = seekBlock(sizeOfDir, locationOfDir);
-
+        if (endOfDirIndex < 0) {
+            free(emptyBlocks);
+            free(path);
+            return -1;
+        }
+        // Clearing the sentinel value
         FAT[endOfDirIndex] = vcb->firstFreeBlock;
         vcb->firstFreeBlock = locationOfDir;
     }
     
-    // Write 
-    LBAwrite(FAT, vcb->freeSpaceSize, vcb->freeSpaceLocation);
+    // Write updated FAT to disk
+    if (writeBlock(FAT, vcb->freeSpaceSize, vcb->freeSpaceLocation) == -1) {
+        free(emptyBlocks);
+        free(path);
+        return -1;
+    }
 
     // Mark the deleted directory as unused
     ppi.parent[index].location = -1;
     
-    // Clearing the name in the directory
+    // Clearing the name and isDirectory in the parent directory
+    // for hexdump to easily show empty directories
     memcpy(ppi.parent[index].name, emptyBlocks, sizeof(ppi.parent[index].name));
     ppi.parent[index].isDirectory = '\0';
 
     // Write the new parent directory with deleted directory into disk
     int sizeOfDirectory = (ppi.parent[0].size + vcb->blockSize - 1) / vcb->blockSize;
-    writeBlock(ppi.parent, sizeOfDirectory, ppi.parent[0].location);
+    if (writeBlock(ppi.parent, sizeOfDirectory, ppi.parent[0].location) == -1) {
+        free(emptyBlocks);
+        free(path);
+        return -1;
+    }
 
-    // Free 
+    // Freeing buffers
     freeDirectory(ppi.parent);
+    free(emptyBlocks);
+    free(path);
+    return 0;
 }

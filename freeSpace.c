@@ -138,5 +138,8 @@ int seekBlock(uint64_t numberOfBlocks, int location) {
     for (int i = 0; i < numberOfBlocks; i++) {
         location = FAT[location];
     }
+    if (location < 0) {
+        return -1;
+    }
     return location;
 }
