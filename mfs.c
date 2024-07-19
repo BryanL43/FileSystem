@@ -270,7 +270,6 @@ struct fs_diriteminfo *fs_readdir(fdDir *dirp)
         pos++;
     }
 
-
     // Populate the fs_diriteminfo structure
     dirp->di->d_reclen = (dirp->directory[pos].size + sizeof(DirectoryEntry) - 1) 
                         / sizeof(DirectoryEntry);
@@ -281,6 +280,11 @@ struct fs_diriteminfo *fs_readdir(fdDir *dirp)
     // Move to the next directory entry
     dirp->dirEntryPosition = 1 + pos;
 
+
+    // Past the end of the number of directories
+    if (dirp->dirEntryPosition >= dirp->directory->size / sizeof(DirectoryEntry)) {
+        return NULL;
+    }
     return dirp->di;
 }
 
