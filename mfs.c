@@ -394,6 +394,8 @@ int fs_move(char *srcPathName, char* destPathName) {
     ppInfo ppiSrc;
     ppInfo ppiDest;
 
+    
+
     char* srcPath = strdup(srcPathName);
     if (srcPath == NULL) {
         return -1;
@@ -402,30 +404,40 @@ int fs_move(char *srcPathName, char* destPathName) {
     if (destPath == NULL) {
         return -1;
     }
+    // char *cwdToPass = cwdPathName;
+    // cwdToPass = strcat(cwdToPass, srcPath);
+    // printf("cwdToPass: %s", cwdToPass);
+    // srcPath = normalizePath(srcPath);
+    // printf("srcPath: %s\n", srcPath);
 
-    fs_mkdir(destPathName, 0777);
+
     parsePath(srcPath, &ppiSrc);
-    parsePath(destPath, &ppiDest);
-    int srcElementIndex = ppiSrc.lastElementIndex;
+    char *newPathName = strcat(destPathName, "/");
+    newPathName = strcat(newPathName, ppiSrc.lastElement);
+    fs_mkdir(newPathName, 0777);
 
+
+    parsePath(newPathName, &ppiDest);
+    int srcElementIndex = ppiSrc.lastElementIndex;
     int destElementIndex = ppiDest.lastElementIndex;
 
-    ppiDest.parent[destElementIndex].dateCreated = ppiSrc.parent[srcElementIndex].dateCreated;
-    ppiDest.parent[destElementIndex].dateModified = ppiSrc.parent[srcElementIndex].dateModified;
-    ppiDest.parent[destElementIndex].isDirectory = ppiSrc.parent[srcElementIndex].isDirectory;
-    ppiDest.parent[destElementIndex].location = ppiSrc.parent[srcElementIndex].location;
-    strcpy(ppiDest.parent[destElementIndex].name, ppiSrc.parent[srcElementIndex].name);
-    ppiDest.parent[destElementIndex].size = ppiSrc.parent[srcElementIndex].size;
+
+
+    ppiDest.parent[destElementIndex].dateCreated = ppiSrc.parent[ppiSrc.lastElementIndex].dateCreated;
+    ppiDest.parent[destElementIndex].dateModified = ppiSrc.parent[ppiSrc.lastElementIndex].dateModified;
+    ppiDest.parent[destElementIndex].isDirectory = ppiSrc.parent[ppiSrc.lastElementIndex].isDirectory;
+    strcpy(ppiDest.parent[destElementIndex].name, ppiSrc.parent[ppiSrc.lastElementIndex].name);
+    ppiDest.parent[destElementIndex].size = ppiSrc.parent[ppiSrc.lastElementIndex].size;
 
 
     // Write new DE to disk
-    int sizeOfDE = (ppiDest.parent[0].size + vcb->blockSize - 1) / vcb->blockSize;
-    writeBlock(ppiDest.parent, sizeOfDE, ppiDest.parent[0].location);
+    int sizeOfDirectory = (ppiDest.parent[0].size + vcb->blockSize - 1) / vcb->blockSize;
+    writeBlock(ppiDest.parent, sizeOfDirectory, ppiDest.parent[0].location);
 
     // Write the actual file to disk
     DirectoryEntry* destDirectory = loadDir(&(ppiDest.parent[ppiDest.lastElementIndex]));
     int location = ppiDest.parent[destElementIndex].location;
-    int size = ppiDest.parent[destElementIndex].size;
+    int size = (ppiDest.parent[destElementIndex].size + vcb->blockSize - 1) / vcb->blockSize;
     writeBlock(destDirectory, size, location);
 
 
@@ -436,6 +448,6 @@ int fs_move(char *srcPathName, char* destPathName) {
         fs_delete(srcPath);
     }
 
-
+    return 0;
 
 }
