@@ -20,9 +20,11 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include "b_io.h"
+#include "freeSpace.h"
 
 #define MAXFCBS 20
 #define B_CHUNK_SIZE 512
+#define MIN(a,b) ((a) < (b) ? (a) : (b))
 
 typedef struct b_fcb
 	{
@@ -139,15 +141,88 @@ int b_write (b_io_fd fd, char * buffer, int count)
 int b_read (b_io_fd fd, char * buffer, int count)
 	{
 
-	if (startup == 0) b_init();  //Initialize our system
+
+
+if (startup == 0)
+		b_init(); // Initialize our system
 
 	// check that fd is between 0 and (MAXFCBS-1)
 	if ((fd < 0) || (fd >= MAXFCBS))
-		{
-		return (-1); 					//invalid file descriptor
+	{
+		return (-1); // invalid file descriptor
+	}
+
+	// and check that the specified FCB is actually in use
+	if (fcbArray[fd].fi == NULL) // File not open for this descriptor
+	{
+		return -1;
+	}
+
+	b_fcb *fcb = &fcbArray[fd];
+	int bytesRead = 0;
+
+	int bytesRemainingInFile = fcb->fi->fileSize - fcb->position;
+	int bytesToRead = MIN(count, bytesRemainingInFile);
+
+	// At the end of the file
+	if (bytesToRead <= 0)
+		return 0;
+
+	// Calculate current buffer position and bytes left in buffer
+	int bytesRemainingInBuffer = B_CHUNK_SIZE - fcb->bufferPosition;
+	int bytesToReadFromBuffer = MIN(bytesToRead, bytesRemainingInBuffer);
+
+	// when there are already bytes in the buffer
+	if (bytesToReadFromBuffer > 0)
+	{
+		// Read any remaining bytes from a previous read into the buffer.
+		memcpy(buffer + bytesRead, fcb->buffer + fcb->bufferPosition, bytesToReadFromBuffer);
+
+		// update trackers
+		fcb->position += bytesToReadFromBuffer;
+		fcb->bufferPosition = fcb->position % B_CHUNK_SIZE;
+		bytesRead += bytesToReadFromBuffer;
+		bytesToRead -= bytesToReadFromBuffer;
+	}
+
+	// Read full chunks directly to the user buffer
+	if (bytesToRead >= B_CHUNK_SIZE)
+	{
+		int fullChunksToRead = bytesToRead / B_CHUNK_SIZE;
+// NEED TO UPDATE CURRENT BLOCK TO FIND CORRECT BLOCK IN FAT
+		int currentBlock = (fcb->position / B_CHUNK_SIZE) + fcb->fi->location;
+
+		// Read as many chunks needed ant calculate the bytes that were read to update trackers
+		int chunksRead = readBlock(fcb->buf, fullChunksToRead,	currentBlock);
+		if (chunksRead < 1) {
+			return -1;
 		}
-		
-	return (0);	//Change this
+		int bytesReadFromChunks = chunksRead * B_CHUNK_SIZE;
+
+		// update trackers
+		fcb->position += bytesReadFromChunks;
+		fcb->bufferPosition = fcb->position % B_CHUNK_SIZE;
+		bytesRead += bytesReadFromChunks;
+		bytesToRead -= bytesReadFromChunks;
+	}
+
+	// Read any remaining bytes into the buffer and copy them to the user buffer
+	if (bytesToRead > 0)
+	{
+		int currentBlock = (fcb->position / B_CHUNK_SIZE) + fcb->fi->location;
+// NEED TO UPDATE CURRENT BLOCK TO FIND CORRECT BLOCK IN FAT
+		if(readBlock(fcb->buffer, 1, currentBlock) != 1) {
+			return -1;
+		}
+		memcpy(buffer + bytesRead, fcb->buffer, bytesToRead);
+
+		// update trackers
+		fcb->position += bytesToRead;
+		fcb->bufferPosition = fcb->position % B_CHUNK_SIZE;
+		bytesRead += bytesToRead;
+	}
+
+	return bytesRead;
 	}
 	
 // Interface to Close the file	
