@@ -389,3 +389,53 @@ int fs_rmdir(const char *pathname) {
     free(path);
     return 0;
 }
+
+int fs_move(char *srcPathName, char* destPathName) {
+    ppInfo ppiSrc;
+    ppInfo ppiDest;
+
+    char* srcPath = strdup(srcPathName);
+    if (srcPath == NULL) {
+        return -1;
+    }
+    char* destPath = strdup(destPathName);
+    if (destPath == NULL) {
+        return -1;
+    }
+
+    fs_mkdir(destPathName, 0777);
+    parsePath(srcPath, &ppiSrc);
+    parsePath(destPath, &ppiDest);
+    int srcElementIndex = ppiSrc.lastElementIndex;
+
+    int destElementIndex = ppiDest.lastElementIndex;
+
+    ppiDest.parent[destElementIndex].dateCreated = ppiSrc.parent[srcElementIndex].dateCreated;
+    ppiDest.parent[destElementIndex].dateModified = ppiSrc.parent[srcElementIndex].dateModified;
+    ppiDest.parent[destElementIndex].isDirectory = ppiSrc.parent[srcElementIndex].isDirectory;
+    ppiDest.parent[destElementIndex].location = ppiSrc.parent[srcElementIndex].location;
+    strcpy(ppiDest.parent[destElementIndex].name, ppiSrc.parent[srcElementIndex].name);
+    ppiDest.parent[destElementIndex].size = ppiSrc.parent[srcElementIndex].size;
+
+
+    // Write new DE to disk
+    int sizeOfDE = (ppiDest.parent[0].size + vcb->blockSize - 1) / vcb->blockSize;
+    writeBlock(ppiDest.parent, sizeOfDE, ppiDest.parent[0].location);
+
+    // Write the actual file to disk
+    DirectoryEntry* destDirectory = loadDir(&(ppiDest.parent[ppiDest.lastElementIndex]));
+    int location = ppiDest.parent[destElementIndex].location;
+    int size = ppiDest.parent[destElementIndex].size;
+    writeBlock(destDirectory, size, location);
+
+
+    // Remove src DE
+    if (fs_isDir) {
+        fs_rmdir(srcPath);
+    } else {
+        fs_delete(srcPath);
+    }
+
+
+
+}
