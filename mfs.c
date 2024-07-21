@@ -404,10 +404,18 @@ int fs_move(char *srcPathName, char* destPathName) {
     }
 
     parsePath(srcPath, &ppiSrc);
-    printPPInfo(ppiSrc);
+    if (ppiSrc.lastElementIndex == -1) {
+        printf("%s not found in %s directory.\n", ppiSrc.lastElement, cwdPathName);
+        return -1;
+    }
 
-    fs_mkdir(destPath, 0777);
-    parsePath(destPath, &ppiDest);
+    if (fs_mkdir(destPath, 0777) == -1) {
+        return -1;
+    }
+
+    if (parsePath(destPath, &ppiDest) == -1) {
+        return -1;
+    }
 
     int srcElementIndex = ppiSrc.lastElementIndex;
     int destElementIndex = ppiDest.lastElementIndex;
@@ -420,41 +428,31 @@ int fs_move(char *srcPathName, char* destPathName) {
 
     // Write new DE to disk
     int sizeOfDirectory = (ppiDest.parent[0].size + vcb->blockSize - 1) / vcb->blockSize;
-    writeBlock(ppiDest.parent, sizeOfDirectory, ppiDest.parent[0].location);
+    if (writeBlock(ppiDest.parent, sizeOfDirectory, ppiDest.parent[0].location) == -1) {
+        return -1;
+    }
 
     // Write the actual file to disk
     DirectoryEntry* destDirectory = loadDir(&(ppiDest.parent[ppiDest.lastElementIndex]));
+    if (destDirectory == NULL) {
+        return -1;
+    }
+
     int location = ppiDest.parent[destElementIndex].location;
     int size = (ppiDest.parent[destElementIndex].size + vcb->blockSize - 1) / vcb->blockSize;
-    writeBlock(destDirectory, size, location);
+    if (writeBlock(destDirectory, size, location) == -1) {
+        return -1;
+    }
 
     // Remove src DE
     if (fs_isDir) {
-        fs_rmdir(srcPath);
+        if (fs_rmdir(srcPath) == -1) {
+            return -1;
+        }
     } else {
-        fs_delete(srcPath);
+        if (fs_delete(srcPath) == -1) {
+            return -1;
+        }
     }
-
     return 0;
-}
-
-void printDE(struct DirectoryEntry* directory) {
-    printf ("|--------------- Directory Entry ---------------|\n");
-    printf ("|------- Variable ------|-------- Value --------|\n");
-    printf ("| name             | %-26s|\n", directory->name);
-    printf ("| size             | %-26i|\n", directory->size);
-    printf ("| location         | %-26i|\n", directory->location);
-    printf ("| is directory     | %-26i|\n", directory->isDirectory);
-    printf ("| date created     | %-26li|\n", directory->dateCreated);
-    printf ("| date modified    | %-26li|\n", directory->dateModified);
-    printf ("|-----------------------------------------------|\n");
-}
-
-void printPPInfo(struct ppInfo * res) {
-    printf ("|--------------- PPRETDATA Entry ---------------|\n");
-    printf ("|------- Variable ------|-------- Value --------|\n");
-    printf ("| last ele name         | %-27s|\n", res->lastElement);
-    printf ("| last ele Index        | %-27i|\n", res->lastElementIndex);
-    printf ("|-----------------------------------------------|\n");
-    printDE(res->parent);
 }
