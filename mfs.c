@@ -286,7 +286,86 @@ struct fs_diriteminfo *fs_readdir(fdDir *dirp)
 }
 
 int fs_delete(char* filename) {
-    // Same as fs_rmdir but can't really test without any files
+    ppInfo ppi;
+
+    // Make a mutable copy of the pathname (discards const for warning issue)
+    char* path = strdup(filename);
+    if (path == NULL) {
+        return -1;
+    }
+
+    // Populate ppInfo
+    if (parsePath(path, &ppi) == -1) {
+        free(path);
+        return -1;
+    }
+    // Loading ppInfo into variables
+    int index = ppi.lastElementIndex;
+    int locationOfFile = ppi.parent[index].location;
+    int sizeOfFile = (ppi.parent[index].size + vcb->blockSize - 1) / vcb->blockSize;
+    if (index < 0) {
+        free(path);
+        return -1;
+    }
+
+    
+
+    // Creating an empty buffer to overwrite contents in disk
+    char *emptyBlocks = malloc(sizeOfFile * vcb->blockSize);
+    if (emptyBlocks == NULL) {
+        free(emptyBlocks);
+        free(path);
+        return -1;
+    }
+
+    // Deleting file in disk
+    if (writeBlock(emptyBlocks, sizeOfFile, locationOfFile) == -1) {
+        free(emptyBlocks);
+        free(path);
+        return -1;
+    }
+    
+
+    // Special case to determine how to clear sentinel value
+    if (sizeOfFile == 1) {
+        // Clearing the sentinel value
+        FAT[locationOfFile] = vcb->firstFreeBlock;
+        vcb->firstFreeBlock = locationOfFile;
+    } else if (sizeOfFile > 1) {
+        // Traverse the FAT until it reaches the sentinel value
+        int endOfFileIndex = seekBlock(sizeOfFile, locationOfFile);
+        if (endOfFileIndex < 0) {
+            free(emptyBlocks);
+            free(path);
+            return -1;
+        }
+        // Clearing the sentinel value
+        FAT[endOfFileIndex] = vcb->firstFreeBlock;
+        vcb->firstFreeBlock = locationOfFile;
+    }
+    // Write updated FAT to disk
+    if (writeBlock(FAT, vcb->freeSpaceSize, vcb->freeSpaceLocation) == -1) {
+        free(emptyBlocks);
+        free(path);
+        return -1;
+    }
+
+    // Mark the deleted directory as unused
+    ppi.parent[index].location = -1;
+
+    // Write the new parent directory with deleted file into disk
+    int sizeOfFileectory = (ppi.parent[0].size + vcb->blockSize - 1) / vcb->blockSize;
+    if (writeBlock(ppi.parent, sizeOfFileectory, ppi.parent[0].location) == -1) {
+        free(emptyBlocks);
+        free(path);
+        return -1;
+    }
+
+    // Freeing buffers
+    freeDirectory(ppi.parent);
+    free(emptyBlocks);
+    free(path);
+    return 0;
 }
 
 int fs_rmdir(const char *pathname) {
