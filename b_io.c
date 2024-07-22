@@ -22,6 +22,7 @@
 #include "b_io.h"
 #include "freeSpace.h"
 #include "fsUtils.h"
+#include "fsDesign.h"
 
 #define MAXFCBS 20
 #define B_CHUNK_SIZE 512
@@ -29,13 +30,17 @@
 
 typedef struct b_fcb {
 	DirectoryEntry* fi; //holds the file information
+	DirectoryEntry* parent;
 
 	/** TODO add al the information you need in the file control block **/
 	char* buf;			//holds the open file buffer
 	int index;			//holds the current position in the buffer
 	int buflen;			//holds how many valid bytes are in the buffer
+	int currentBlock;	//holds the current block number
+	int blockSize;		//holds the total number of blocks the file occupies
 
 	int fileIndex;		//holds the index at where the file is located at in the parent
+	int activeFlags;	//holds the flags for the opened file
 } b_fcb;
 	
 b_fcb fcbArray[MAXFCBS];
@@ -87,9 +92,47 @@ b_io_fd b_open(char* filename, int flags) {
 	b_fcb fcb = fcbArray[returnFd];
 	fcb.fi = malloc(sizeof(DirectoryEntry));
 	fcb.buf = malloc(vcb->blockSize);
+
+	// Read an existing file
+	if (flags & O_RDONLY && ppi.lastElementIndex > 0) {
+		strncpy(fcb.fi->name, ppi.parent[ppi.lastElementIndex].name, sizeof(fcb.fi->name));
+		fcb.fi->size = ppi.parent[ppi.lastElementIndex].size;
+		fcb.fi->location = ppi.parent[ppi.lastElementIndex].location;
+		fcb.fi->isDirectory = ppi.parent[ppi.lastElementIndex].isDirectory;
+		fcb.fi->dateCreated = ppi.parent[ppi.lastElementIndex].dateCreated;
+		fcb.fi->dateModified = ppi.parent[ppi.lastElementIndex].dateModified;
+
+		// Initialize variable information needed for read
+		fcb.index = 0;
+		fcb.buflen = ppi.parent[ppi.lastElementIndex].size;
+		fcb.currentBlock = 0;
+		fcb.fileIndex = ppi.lastElementIndex;
+	}
+
+	// Write an existing file
+	else if (ppi.lastElementIndex > 0) {
+		strncpy(fcb.fi->name, ppi.parent[ppi.lastElementIndex].name, sizeof(fcb.fi->name));
+		fcb.fi->size = ppi.parent[ppi.lastElementIndex].size;
+		fcb.fi->location = ppi.parent[ppi.lastElementIndex].location;
+		fcb.fi->isDirectory = ppi.parent[ppi.lastElementIndex].isDirectory;
+		fcb.fi->dateCreated = ppi.parent[ppi.lastElementIndex].dateCreated;
+		fcb.fi->dateModified = ppi.parent[ppi.lastElementIndex].dateModified;
+		
+		// Initialize variable information needed for read
+		fcb.index = 0;
+		fcb.currentBlock = ppi.parent[ppi.lastElementIndex].location;
+		fcb.fileIndex = ppi.lastElementIndex;
+
+		// Offset index if file needs to be truncated
+		if (flags & O_TRUNC) {
+			fcb.currentBlock = seekBlock(fcb.blockSize, fcb.currentBlock);
+			fcb.index = ppi.parent[ppi.lastElementIndex].size % vcb->blockSize;
+			readBlock(fcb.buf, 1, fcb.currentBlock);
+		}
+	}
 	
 	// Create a new file
-	if (flags & O_CREAT) {
+	else if (flags & O_CREAT) {
 		strncpy(fcb.fi->name, ppi.lastElement, sizeof(fcb.fi->name));
 		fcb.fi->size = 0;
 		fcb.fi->location = -2; // Special sentinel to indicate file occupied space
@@ -98,7 +141,9 @@ b_io_fd b_open(char* filename, int flags) {
 		fcb.fi->dateCreated = currTime;
 		fcb.fi->dateModified = currTime;
 
-		//[TO-DO] update variable information needed for read/write
+		// Initialize variable information needed for read/write
+		fcb.activeFlags = flags;
+		fcb.blockSize = (fcb.fi->size + vcb->blockSize - 1) / vcb->blockSize;
 
 		DirectoryEntry* temp = loadDir(ppi.parent);
     	ppi.parent = temp;
@@ -119,6 +164,13 @@ b_io_fd b_open(char* filename, int flags) {
 
 		free(temp);
 	}
+
+	else {
+		free(fcb.buf);
+		return -1;
+	}
+
+	fcb.parent = ppi.parent; //allow access to write
 
 	ppi.parent[fcb.fileIndex] = *fcb.fi; //dereference file information and write to disk
 	
@@ -146,7 +198,6 @@ int b_seek (b_io_fd fd, off_t offset, int whence) {
 
 
 
-// Interface to write function	
 // Interface to write function	
 int b_write (b_io_fd fd, char * buffer, int count) {
 	if (startup == 0) b_init();  //Initialize our system
@@ -213,11 +264,6 @@ int b_write (b_io_fd fd, char * buffer, int count) {
 
 	if (part1 > 0) {
 		memcpy(fcb.buf + fcb.index, buffer, part1);
-		// for (int i = 1; i < 20; i++) {
-		// 	printf("%s", fcb.buf[i]);
-		// }
-		// printf(fcb.buf[1]);
-		printf("%d", fcb.currentBlock);
 		writeBlock(fcb.buf, 1, fcb.currentBlock);
 		fcb.index += part1;
 	}
@@ -351,7 +397,6 @@ int b_read (b_io_fd fd, char * buffer, int count) {
 
 // 	return bytesRead;
 	}
-	
 // Interface to Close the file	
 int b_close (b_io_fd fd) {
 	if (fd < 0 || fd >= MAXFCBS || fcbArray[fd].fi == NULL) {
