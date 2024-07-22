@@ -56,7 +56,7 @@ int initFreeSpace(uint64_t numberOfBlocks, uint64_t blockSize) {
  * Retrieves a specified number of free blocks.
  * 
  * @param numberOfBlocks The number of contiguous blocks requested.
- * @param last_block_in_file The lastt block in the file being extended. 0 if new file
+ * @param last_block_in_file The last block in the file being extended. 0 if new file
  * @return Returns the index of the first free block, or -1 if unsuccessful.
 */
 int getFreeBlocks(uint64_t numberOfBlocks, uint64_t last_block_in_file) {
@@ -135,11 +135,11 @@ int readBlock(void* buffer, uint64_t numberOfBlocks, int location) {
 }
 
 int seekBlock(uint64_t numberOfBlocks, int location) {
-    for (int i = 0; i < numberOfBlocks; i++) {
-        location = FAT[location];
-    }
     if (location < 0) {
         return -1;
+    }
+    for (int i = 0; i < numberOfBlocks; i++) {
+        location = FAT[location];
     }
     return location;
 }

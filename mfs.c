@@ -80,8 +80,8 @@ int fs_mkdir(const char *pathname, mode_t mode) {
         return -1;
     }
 
-    DirectoryEntry* test = loadDir(ppi.parent);
-    ppi.parent = test;
+    DirectoryEntry* temp = loadDir(ppi.parent);
+    ppi.parent = temp;
     
     int vacantDE = findUnusedDE(ppi.parent);
     if (vacantDE == -1) {
@@ -109,7 +109,6 @@ int fs_mkdir(const char *pathname, mode_t mode) {
     }
     
     memcpy(&(ppi.parent[vacantDE]), newDir, sizeof(DirectoryEntry));
-    //readBlock(&(ppi.parent[vacantDE]), 1, newDir->location);
     strncpy(ppi.parent[vacantDE].name, ppi.lastElement, sizeof(ppi.parent->name));
 
     writeBlock(ppi.parent, (ppi.parent->size + vcb->blockSize - 1) / vcb->blockSize, ppi.parent->location);
@@ -219,8 +218,6 @@ fdDir * fs_opendir(const char *pathname){
         ppi.lastElementIndex = 0;
     }
     
-//   DirectoryEntry * thisDir = root ;
-//   DirectoryEntry * thisDir = loadDir(&(ppi->parent));
     DirectoryEntry * thisDir = loadDir(&(ppi.parent[ppi.lastElementIndex]));
     dirp->directory = thisDir;
     dirp->dirEntryPosition = 0;
