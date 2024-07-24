@@ -214,10 +214,6 @@ int b_write (b_io_fd fd, char * buffer, int count) {
 		return -1;
 	}
 
-	if (fcbArray[fd].activeFlags & O_CREAT) {
-
-	}
-
 	b_fcb fcb = fcbArray[fd];
 
 	int bytesInBlock; // The space the file occupies on disk
@@ -286,8 +282,10 @@ int b_write (b_io_fd fd, char * buffer, int count) {
 
 	// Update Directory Entry in parent
 	fcbArray[fd] = fcb;
-    struct DirectoryEntry* parent = fcbArray[fd].parent;
-    parent[fcb.fileIndex].size = fcb.fi;
+    struct DirectoryEntry* parent = fcb.parent;
+    parent[fcb.fileIndex].size = fcb.fi->size;
+	parent[fcb.fileIndex].location = fcb.fi->location;
+	parent[fcb.fileIndex].isDirectory = fcb.fi->isDirectory;
 
     int parentSizeInBlocks = (parent->size + vcb->blockSize - 1) / vcb->blockSize;
     writeBlock(parent, parentSizeInBlocks, parent->location);

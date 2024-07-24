@@ -303,7 +303,8 @@ int fs_delete(char* filename) {
     int index = ppi.lastElementIndex;
     int locationOfFile = ppi.parent[index].location;
     int sizeOfFile = (ppi.parent[index].size + vcb->blockSize - 1) / vcb->blockSize;
-    if (index < 0) {
+    if (index == -1) {
+        printf("File doesn't exist\n");
         free(path);
         return -1;
     }
@@ -319,7 +320,8 @@ int fs_delete(char* filename) {
     }
 
     // Deleting file in disk
-    if (writeBlock(emptyBlocks, sizeOfFile, locationOfFile) == -1) {
+    int retVal = writeBlock(emptyBlocks, sizeOfFile, locationOfFile);
+    if (retVal == -1) {
         free(emptyBlocks);
         free(path);
         return -1;
@@ -354,8 +356,8 @@ int fs_delete(char* filename) {
     ppi.parent[index].location = -1;
 
     // Write the new parent directory with deleted file into disk
-    int sizeOfFileectory = (ppi.parent[0].size + vcb->blockSize - 1) / vcb->blockSize;
-    if (writeBlock(ppi.parent, sizeOfFileectory, ppi.parent[0].location) == -1) {
+    int sizeOfParentDir = (ppi.parent[0].size + vcb->blockSize - 1) / vcb->blockSize;
+    if (writeBlock(ppi.parent, sizeOfParentDir, ppi.parent[0].location) == -1) {
         free(emptyBlocks);
         free(path);
         return -1;
@@ -402,10 +404,8 @@ int fs_rmdir(const char *pathname) {
 
     // Load directory for empty check
     DirectoryEntry* directoryToDelete = loadDir(&(ppi.parent[ppi.lastElementIndex]));
-    
     if(isDirEmpty(directoryToDelete) == -1) {
         // When the directory is not empty, return error
-        printf("Dir is not empty(This printf is printing from mfs).\n");
         free(emptyBlocks);
         free(path);
         return -1;
@@ -481,7 +481,6 @@ int fs_move(char *srcPathName, char* destPathName) {
 
     parsePath(srcPath, &ppiSrc);
     if (ppiSrc.lastElementIndex == -1) {
-        printf("%s not found in %s directory.\n", ppiSrc.lastElement, cwdPathName);
         return -1;
     }
 
@@ -525,7 +524,7 @@ int fs_move(char *srcPathName, char* destPathName) {
         if (fs_rmdir(srcPath) == -1) {
             return -1;
         }
-    } else {
+    } else if (fs_isFile) {
         if (fs_delete(srcPath) == -1) {
             return -1;
         }
