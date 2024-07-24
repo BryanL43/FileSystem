@@ -129,7 +129,7 @@ b_io_fd b_open(char* filename, int flags) {
 
 		// Fatal error if no vacant entry spot is found
 		if (fcb.fileIndex < 0) {
-			free(fcb.fi);
+			fcb.fi = NULL;
 			free(fcb.buf);
 			free(temp);
 			return -1;
@@ -199,98 +199,102 @@ int b_seek (b_io_fd fd, off_t offset, int whence) {
 
 
 
-// Interface to write function	
+// Interface to write function    
 int b_write (b_io_fd fd, char * buffer, int count) {
-	if (startup == 0) b_init();  //Initialize our system
+    if (startup == 0) b_init();  //Initialize our system
 
-	// check that fd is between 0, (MAXFCBS-1), active fd, and valid length
-	if ((fd < 0) || (fd >= MAXFCBS) || (fcbArray[fd].fi == NULL) || (count < 0)) {
-		return (-1); //invalid file descriptor
-	}
+    // check that fd is between 0, (MAXFCBS-1), active fd, and valid length
+    if ((fd < 0) || (fd >= MAXFCBS) || (fcbArray[fd].fi == NULL) || (count < 0)) {
+        return (-1); //invalid file descriptor
+    }
 
-	// check for valid write flag
-	if (fcbArray[fd].activeFlags & O_RDONLY) {
-		printf("File is read only!\n");
-		return -1;
-	}
+    // check for valid write flag
+    if (fcbArray[fd].activeFlags & O_RDONLY) {
+        printf("File is read only!\n");
+        return -1;
+    }
 
-	b_fcb fcb = fcbArray[fd];
+    b_fcb* fcb = &fcbArray[fd];
 
-	int bytesInBlock; // The space the file occupies on disk
-	int part1, part2, part3;
-	int numberOfBlocksToWrite;
+    int bytesInBlock; // The space the file occupies on disk
+    int part1, part2, part3;
+    int numberOfBlocksToWrite;
+    
+    // Calculate the amount of free space in file block(s)
+    if (fcb->fi->size <= 0) {
+        fcb->fi->size = 0;
+        bytesInBlock = vcb->blockSize;
+        fcb->buflen = vcb->blockSize;
+    } else {
+        bytesInBlock = fcb->buflen - fcb->index;
+    }
 	
-	// Calculate the amount of free space in file block(s)
-	if (fcb.fi->size <= 0) {
-		fcb.fi->size = 0;
-		bytesInBlock = vcb->blockSize;
-		fcb.buflen = vcb->blockSize;
-	} else {
-		bytesInBlock = fcb.buflen - fcb.index;
-	}
+    int remainingSpace = (fcb->fi->size + count) - (fcb->blockSize * vcb->blockSize);
+	printf("fcb.fi.location: %d\n", fcb->fi->location);
+    int newBlocksRequired = (remainingSpace + vcb->blockSize - 1) / vcb->blockSize;
+	printf("fcb.fi.location: %d\n", fcb->fi->location);
 
-	int remainingSpace = (fcb.fi->size + count) - (fcb.blockSize * vcb->blockSize);
-	int newBlocksRequired = (remainingSpace + vcb->blockSize - 1) / vcb->blockSize;
-	
-	// Grow file size if necessary
+    // Grow file size if necessary
+    if (newBlocksRequired > 0) {
+        newBlocksRequired = newBlocksRequired > fcb->blockSize ? newBlocksRequired : fcb->blockSize;
+        int newBlocks = getFreeBlocks(1, 0);
+		
+        int lastBlockInDisk = seekBlock(newBlocksRequired, fcb->fi->location);
+        if (fcb->fi->location == -2) { // Fresh file data in disk
+            fcb->currentBlock = newBlocks;
+            fcb->fi->location = newBlocks;
+        } else { // Existing file data in disk
+			printf("lastBlockInDisk: %d\n", lastBlockInDisk);
+            FAT[lastBlockInDisk] = newBlocks;
+        }
+        fcb->blockSize += newBlocksRequired;
+    }
+    
+    if (bytesInBlock >= count) {
+        part1 = count;
+        part2 = 0;
+        part3 = 0;
+    } else {
+        part1 = bytesInBlock;
+        part3 = count - bytesInBlock;
+        numberOfBlocksToWrite = part3 / vcb->blockSize;
+        part2 = numberOfBlocksToWrite * vcb->blockSize;
+        part3 = part3 - part2;
+    }
 
-	if (newBlocksRequired > 0) {
-		newBlocksRequired = newBlocksRequired > fcb.blockSize ? newBlocksRequired : fcb.blockSize;
-		int newBlocks = getFreeBlocks(newBlocksRequired, 0);
-		int lastBlockInDisk = seekBlock(fcb.blockSize - 1, fcb.fi->location);
-		if (fcb.fi->location == -2) { // Fresh file data in disk
-			fcb.currentBlock = newBlocks;
-			fcb.fi->location = newBlocks;
-		} else { // Existing file data in disk
-			FAT[lastBlockInDisk] = newBlocks;
-		}
-		fcb.blockSize += newBlocksRequired;
-	}
-	
-	if (bytesInBlock >= count) {
-		part1 = count;
-		part2 = 0;
-		part3 = 0;
-	} else {
-		part1 = bytesInBlock;
-		part3 = count - bytesInBlock;
-		numberOfBlocksToWrite = part3 / vcb->blockSize;
-		part2 = numberOfBlocksToWrite * vcb->blockSize;
-		part3 = part3 - part2;
-	}
+    if (part1 > 0) {
+        printf("amogus\n");
+        memcpy(fcb->buf + fcb->index, buffer, part1);
+        writeBlock(fcb->buf, 1, fcb->currentBlock);
+        fcb->index += part1;
+    }
 
-	if (part1 > 0) {
-		memcpy(fcb.buf + fcb.index, buffer, part1);
-		writeBlock(fcb.buf, 1, fcb.currentBlock);
-		fcb.index += part1;
-	}
+    if (part2 > 0) {
+        int blocksWritten = writeBlock(buffer + part1, numberOfBlocksToWrite, fcb->currentBlock);
+        fcb->currentBlock = seekBlock(numberOfBlocksToWrite, fcb->currentBlock);
+        part2 = blocksWritten * vcb->blockSize;
+    }
 
-	if (part2 > 0) {
-		int blocksWritten = writeBlock(buffer + part1, numberOfBlocksToWrite, fcb.currentBlock);
-		fcb.currentBlock = seekBlock(numberOfBlocksToWrite, fcb.currentBlock);
-		part2 = blocksWritten * vcb->blockSize;
-	}
+    if (part3 > 0) {
+        memcpy(fcb->buf, buffer + part1 + part2, part3);
+        fcb->currentBlock = seekBlock(1, fcb->currentBlock);
+        writeBlock(fcb->buf, 1, fcb->currentBlock);
+        fcb->index = part3;
+    }
 
-	if (part3 > 0) {
-		memcpy(fcb.buf, buffer + part1 + part2, part3);
-		fcb.currentBlock = seekBlock(1, fcb.currentBlock);
-		writeBlock(fcb.buf, 1, fcb.currentBlock);
-		fcb.index = part3;
-	}
+    fcb->fi->size += part1 + part2 + part3;
 
-	fcb.fi->size += part1 + part2 + part3;
-
-	// Update Directory Entry in parent
-	fcbArray[fd] = fcb;
-    struct DirectoryEntry* parent = fcb.parent;
-    parent[fcb.fileIndex].size = fcb.fi->size;
-	parent[fcb.fileIndex].location = fcb.fi->location;
-	parent[fcb.fileIndex].isDirectory = fcb.fi->isDirectory;
+    // Update Directory Entry in parent
+    fcbArray[fd] = *fcb;
+    struct DirectoryEntry* parent = fcb->parent;
+    parent[fcb->fileIndex].size = fcb->fi->size;
+    parent[fcb->fileIndex].location = fcb->fi->location;
+    parent[fcb->fileIndex].isDirectory = fcb->fi->isDirectory;
 
     int parentSizeInBlocks = (parent->size + vcb->blockSize - 1) / vcb->blockSize;
     writeBlock(parent, parentSizeInBlocks, parent->location);
-	
-	return part1 + part2 + part3;
+    
+    return part1 + part2 + part3;
 }
 
 
