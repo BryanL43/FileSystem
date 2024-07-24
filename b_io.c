@@ -339,6 +339,12 @@ int b_read (b_io_fd fd, char * buffer, int count) {
 		return -1;
 	}
 
+	// check for valid write flag
+	if (fcbArray[fd].activeFlags & O_WRONLY) {
+		printf("Error file is writeonly, but you tried to read!\n");
+		return -1;
+	}
+
 	// the meat and potates here
 	
 	b_fcb fcb = fcbArray[fd];
