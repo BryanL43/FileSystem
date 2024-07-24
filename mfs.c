@@ -263,7 +263,7 @@ struct fs_diriteminfo *fs_readdir(fdDir *dirp)
     unsigned short pos = dirp->dirEntryPosition;
 
     // Find the next valid directory entry
-    while (dirp->directory[pos].location < 0) {
+    while (dirp->directory[pos].location < 0 && dirp->directory[pos].location != -2) {
         pos++;
     }
 
