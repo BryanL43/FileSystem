@@ -292,6 +292,11 @@ int fs_delete(char* filename) {
         return -1;
     }
 
+    if(deleteBlob(ppi) == -1)
+    {
+        free(path);
+        return -1;
+    }
     // Populate ppInfo
     if (parsePath(path, &ppi) == -1) {
         free(path);
@@ -299,56 +304,6 @@ int fs_delete(char* filename) {
     }
     // Loading ppInfo into variables
     int index = ppi.lastElementIndex;
-    int locationOfFile = ppi.parent[index].location;
-    int sizeOfFile = (ppi.parent[index].size + vcb->blockSize - 1) / vcb->blockSize;
-    if (index == -1) {
-        printf("File doesn't exist\n");
-        free(path);
-        return -1;
-    }
-
-    
-
-    // Creating an empty buffer to overwrite contents in disk
-    char *emptyBlocks = malloc(sizeOfFile * vcb->blockSize);
-    if (emptyBlocks == NULL) {
-        free(emptyBlocks);
-        free(path);
-        return -1;
-    }
-
-    // Deleting file in disk
-    int retVal = writeBlock(emptyBlocks, sizeOfFile, locationOfFile);
-    if (retVal == -1) {
-        free(emptyBlocks);
-        free(path);
-        return -1;
-    }
-    
-
-    // Special case to determine how to clear sentinel value
-    if (sizeOfFile == 1) {
-        // Clearing the sentinel value
-        FAT[locationOfFile] = vcb->firstFreeBlock;
-        vcb->firstFreeBlock = locationOfFile;
-    } else if (sizeOfFile > 1) {
-        // Traverse the FAT until it reaches the sentinel value
-        int endOfFileIndex = seekBlock(sizeOfFile, locationOfFile);
-        if (endOfFileIndex < 0) {
-            free(emptyBlocks);
-            free(path);
-            return -1;
-        }
-        // Clearing the sentinel value
-        FAT[endOfFileIndex] = vcb->firstFreeBlock;
-        vcb->firstFreeBlock = locationOfFile;
-    }
-    // Write updated FAT to disk
-    if (writeBlock(FAT, vcb->freeSpaceSize, vcb->freeSpaceLocation) == -1) {
-        free(emptyBlocks);
-        free(path);
-        return -1;
-    }
 
     // Mark the deleted directory as unused
     ppi.parent[index].location = -1;
@@ -356,14 +311,12 @@ int fs_delete(char* filename) {
     // Write the new parent directory with deleted file into disk
     int sizeOfParentDir = (ppi.parent[0].size + vcb->blockSize - 1) / vcb->blockSize;
     if (writeBlock(ppi.parent, sizeOfParentDir, ppi.parent[0].location) == -1) {
-        free(emptyBlocks);
         free(path);
         return -1;
     }
 
     // Freeing buffers
     freeDirectory(ppi.parent);
-    free(emptyBlocks);
     free(path);
     return 0;
 }

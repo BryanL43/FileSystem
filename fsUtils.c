@@ -291,3 +291,33 @@ int parsePath(char* path, ppInfo* ppi) {
 
     return 0;
 }
+
+int deleteBlob(ppInfo ppi) {
+    int locationOfFile = ppi.parent[ppi.lastElementIndex].location;
+    int sizeOfFile = (ppi.parent[ppi.lastElementIndex].size + vcb->blockSize - 1) / vcb->blockSize;
+    if (ppi.lastElementIndex == -1) {
+        return -1;
+    }
+
+    // Special case to determine how to clear sentinel value
+    if (sizeOfFile == 1) {
+        // Clearing the sentinel value
+        FAT[locationOfFile] = vcb->firstFreeBlock;
+        vcb->firstFreeBlock = locationOfFile;
+    } else if (sizeOfFile > 1) {
+        // Traverse the FAT until it reaches the sentinel value
+        int endOfFileIndex = seekBlock(sizeOfFile, locationOfFile);
+        if (endOfFileIndex < 0) {
+            return -1;
+        }
+        // Clearing the sentinel value
+        FAT[endOfFileIndex] = vcb->firstFreeBlock;
+        vcb->firstFreeBlock = locationOfFile;
+    }
+    // Write updated FAT to disk
+    if (writeBlock(FAT, vcb->freeSpaceSize, vcb->freeSpaceLocation) == -1) {
+        return -1;
+    }
+    
+    return 0;
+}
