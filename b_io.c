@@ -23,6 +23,7 @@
 #include "freeSpace.h"
 #include "fsUtils.h"
 #include "fsDesign.h"
+#include "mfs.h"
 
 #define MAXFCBS 20
 #define B_CHUNK_SIZE 512
@@ -49,6 +50,10 @@ int startup = 0;	//Indicates that this has not been initialized
 
 //Method to initialize our file system
 void b_init() {
+	if (startup) { // already initialized
+		return;
+	}
+
 	//init fcbArray to all free
 	for (int i = 0; i < MAXFCBS; i++) {
 		fcbArray[i].buf = NULL; //indicates a free fcbArray
@@ -61,6 +66,7 @@ void b_init() {
 b_io_fd b_getFCB() {
 	for (int i = 0; i < MAXFCBS; i++) {
 		if (fcbArray[i].buf == NULL) {
+			fcbArray[i].fi = (DirectoryEntry*)-2; // used but not assigned
 			return i;		//Not thread safe (But do not worry about it for this assignment)
 		}
 	}
@@ -71,14 +77,17 @@ b_io_fd b_getFCB() {
 // Modification of interface for this assignment, flags match the Linux flags for open
 // O_RDONLY, O_WRONLY, or O_RDWR
 b_io_fd b_open(char* filename, int flags) {
+	if (startup == 0) b_init();  //Initialize our system
+
+	// Ensure flag exists
+	if (!flags) {
+		return -1;
+	}
+
 	b_io_fd returnFd;
 	ppInfo ppi;
 
-	//*** TODO ***:  Modify to save or set any information needed
-	//
-	//
-		
-	if (startup == 0) b_init();  //Initialize our system
+	DirectoryEntry file; //holds the temp file that will be placed into fcb.fi
 	
 	returnFd = b_getFCB(); // get our own file descriptor
 	if (returnFd == -1) { // check for error - all used FCB's
@@ -89,62 +98,26 @@ b_io_fd b_open(char* filename, int flags) {
         return -1;
     }
 
+	// Check if last element index is a directory
+	if (ppi.lastElementIndex > 0 && ppi.parent[ppi.lastElementIndex].isDirectory == 'd') {
+		return -1;
+	}
+
 	b_fcb fcb = fcbArray[returnFd];
-	fcb.fi = malloc(sizeof(DirectoryEntry));
-	fcb.buf = malloc(vcb->blockSize);
 
-	// Read an existing file
-	if (flags & O_RDONLY && ppi.lastElementIndex > 0) {
-		strncpy(fcb.fi->name, ppi.parent[ppi.lastElementIndex].name, sizeof(fcb.fi->name));
-		fcb.fi->size = ppi.parent[ppi.lastElementIndex].size;
-		fcb.fi->location = ppi.parent[ppi.lastElementIndex].location;
-		fcb.fi->isDirectory = ppi.parent[ppi.lastElementIndex].isDirectory;
-		fcb.fi->dateCreated = ppi.parent[ppi.lastElementIndex].dateCreated;
-		fcb.fi->dateModified = ppi.parent[ppi.lastElementIndex].dateModified;
-
-		// Initialize variable information needed for read
-		fcb.index = 0;
-		fcb.buflen = ppi.parent[ppi.lastElementIndex].size;
-		fcb.currentBlock = 0;
-		fcb.fileIndex = ppi.lastElementIndex;
-	}
-
-	// Write an existing file
-	else if (ppi.lastElementIndex > 0) {
-		strncpy(fcb.fi->name, ppi.parent[ppi.lastElementIndex].name, sizeof(fcb.fi->name));
-		fcb.fi->size = ppi.parent[ppi.lastElementIndex].size;
-		fcb.fi->location = ppi.parent[ppi.lastElementIndex].location;
-		fcb.fi->isDirectory = ppi.parent[ppi.lastElementIndex].isDirectory;
-		fcb.fi->dateCreated = ppi.parent[ppi.lastElementIndex].dateCreated;
-		fcb.fi->dateModified = ppi.parent[ppi.lastElementIndex].dateModified;
-		
-		// Initialize variable information needed for read
-		fcb.index = 0;
-		fcb.currentBlock = ppi.parent[ppi.lastElementIndex].location;
-		fcb.fileIndex = ppi.lastElementIndex;
-
-		// Offset index if file needs to be truncated
-		if (flags & O_TRUNC) {
-			fcb.currentBlock = seekBlock(fcb.blockSize, fcb.currentBlock);
-			fcb.index = ppi.parent[ppi.lastElementIndex].size % vcb->blockSize;
-			readBlock(fcb.buf, 1, fcb.currentBlock);
-		}
-	}
-	
-	// Create a new file
-	else if (flags & O_CREAT) {
-		strncpy(fcb.fi->name, ppi.lastElement, sizeof(fcb.fi->name));
-		fcb.fi->size = 0;
-		fcb.fi->location = -2; // Special sentinel to indicate file occupied space
-		fcb.fi->isDirectory = ' ';
+	// Create a file if it doesn't exist
+	if (ppi.lastElementIndex == -1 && flags & O_CREAT) {
+		printf("Create fired!\n");
+		// Populate the file information
+		strncpy(file.name, ppi.lastElement, sizeof(file.name));
+		file.size = 0;
+		file.location = -2; // Special sentinel to indicate fresh file with 0 size
+		file.isDirectory = ' ';
 		time_t currTime = time(NULL);
-		fcb.fi->dateCreated = currTime;
-		fcb.fi->dateModified = currTime;
+		file.dateCreated = currTime;
+		file.dateModified = currTime;
 
-		// Initialize variable information needed for read/write
-		fcb.activeFlags = flags;
-		fcb.blockSize = (fcb.fi->size + vcb->blockSize - 1) / vcb->blockSize;
-
+		// Initialize variable information needed for b_read/b_write
 		DirectoryEntry* temp = loadDir(ppi.parent);
     	ppi.parent = temp;
 
@@ -165,22 +138,50 @@ b_io_fd b_open(char* filename, int flags) {
 		free(temp);
 	}
 
-	else {
-		free(fcb.buf);
+	// Truncate a file (requires write access)
+	if (ppi.lastElementIndex > 0 && (flags & O_TRUNC) && (flags & O_WRONLY)) {
+		printf("Truncate fired!\n");
+		// Populate the file information
+		file = ppi.parent[ppi.lastElementIndex];
+		file.location = -2;
+		file.size = 0;
+
+		// Initialize variable information needed for b_read/b_write
+		fcb.index = fcb.buflen = fcb.currentBlock = fcb.blockSize = 0;
+
+		fs_delete(ppi.lastElement);
+	}
+	
+	// Append a file
+	if (flags & O_APPEND) {
+		printf("Append fired!\n");
+	}
+
+	fcb.fi = &file; //assign temp file to fcb.fi
+
+	// Instantiate file control block buffer
+	fcb.buf = malloc(vcb->blockSize);
+	if (fcb.buf == NULL) {
 		return -1;
 	}
 
-	fcb.parent = ppi.parent; //allow access to write
+	// Populate/verify file control block's variable
+	fcb.index = (fcb.index > 0) ? fcb.index : 0;
+	fcb.buflen = (fcb.buflen > 0) ? fcb.buflen : 0;
+	fcb.currentBlock = (fcb.currentBlock > 0) ? fcb.currentBlock : 0;
+	fcb.blockSize = (fcb.blockSize > 0) ? fcb.blockSize : 0;
+	fcb.fileIndex = (fcb.fileIndex == 0) ? ppi.lastElementIndex : fcb.fileIndex;
 
+	fcb.parent = ppi.parent; //allow access to write
 	ppi.parent[fcb.fileIndex] = *fcb.fi; //dereference file information and write to disk
-	
-	// Write file to disk
+
+	// Write parent to disk for updating
 	int numOfBlocks = (ppi.parent->size + vcb->blockSize - 1) / vcb->blockSize;
 	writeBlock(ppi.parent, numOfBlocks, ppi.parent[0].location);
 
 	fcbArray[returnFd] = fcb;
-	
-	return (returnFd); // all set
+
+	return (returnFd);
 }
 
 
@@ -316,10 +317,6 @@ int b_write (b_io_fd fd, char * buffer, int count) {
 //  | Part1       |  Part 2                                        | Part3  |
 //  +-------------+------------------------------------------------+--------+
 int b_read (b_io_fd fd, char * buffer, int count) {
-
-
-// bryan section temp
-//  +-------------+------------------------------------------------+--------+
 	int bytesRead;
 	int bytesReturned;
 	int part, part2, part3;
@@ -419,78 +416,9 @@ int b_read (b_io_fd fd, char * buffer, int count) {
 	bytesReturned = part + part2 + part3;
 
 	return bytesReturned;
-	
-	return 0;
-//+-------------+------------------------------------------------+--------+
+}
 
-// matt attempt
 
-// 	b_fcb *fcb = &fcbArray[fd];
-// 	int bytesRead = 0;
-
-// 	int bytesRemainingInFile = fcb->fi->fileSize - fcb->position;
-// 	int bytesToRead = MIN(count, bytesRemainingInFile);
-
-// 	// At the end of the file
-// 	if (bytesToRead <= 0)
-// 		return 0;
-
-// 	// Calculate current buffer position and bytes left in buffer
-// 	int bytesRemainingInBuffer = B_CHUNK_SIZE - fcb->bufferPosition;
-// 	int bytesToReadFromBuffer = MIN(bytesToRead, bytesRemainingInBuffer);
-
-// 	// when there are already bytes in the buffer
-// 	if (bytesToReadFromBuffer > 0)
-// 	{
-// 		// Read any remaining bytes from a previous read into the buffer.
-// 		memcpy(buffer + bytesRead, fcb->buffer + fcb->bufferPosition, bytesToReadFromBuffer);
-
-// 		// update trackers
-// 		fcb->position += bytesToReadFromBuffer;
-// 		fcb->bufferPosition = fcb->position % B_CHUNK_SIZE;
-// 		bytesRead += bytesToReadFromBuffer;
-// 		bytesToRead -= bytesToReadFromBuffer;
-// 	}
-
-// 	// Read full chunks directly to the user buffer
-// 	if (bytesToRead >= B_CHUNK_SIZE)
-// 	{
-// 		int fullChunksToRead = bytesToRead / B_CHUNK_SIZE;
-// // NEED TO UPDATE CURRENT BLOCK TO FIND CORRECT BLOCK IN FAT
-// 		int currentBlock = (fcb->position / B_CHUNK_SIZE) + fcb->fi->location;
-
-// 		// Read as many chunks needed ant calculate the bytes that were read to update trackers
-// 		int chunksRead = readBlock(fcb->buf, fullChunksToRead,	currentBlock);
-// 		if (chunksRead < 1) {
-// 			return -1;
-// 		}
-// 		int bytesReadFromChunks = chunksRead * B_CHUNK_SIZE;
-
-// 		// update trackers
-// 		fcb->position += bytesReadFromChunks;
-// 		fcb->bufferPosition = fcb->position % B_CHUNK_SIZE;
-// 		bytesRead += bytesReadFromChunks;
-// 		bytesToRead -= bytesReadFromChunks;
-// 	}
-
-// 	// Read any remaining bytes into the buffer and copy them to the user buffer
-// 	if (bytesToRead > 0)
-// 	{
-// 		int currentBlock = (fcb->position / B_CHUNK_SIZE) + fcb->fi->location;
-// // NEED TO UPDATE CURRENT BLOCK TO FIND CORRECT BLOCK IN FAT
-// 		if(readBlock(fcb->buffer, 1, currentBlock) != 1) {
-// 			return -1;
-// 		}
-// 		memcpy(buffer + bytesRead, fcb->buffer, bytesToRead);
-
-// 		// update trackers
-// 		fcb->position += bytesToRead;
-// 		fcb->bufferPosition = fcb->position % B_CHUNK_SIZE;
-// 		bytesRead += bytesToRead;
-// 	}
-
-// 	return bytesRead;
-	}
 // Interface to Close the file	
 int b_close (b_io_fd fd) {
 	if (fd < 0 || fd >= MAXFCBS || fcbArray[fd].fi == NULL) {
