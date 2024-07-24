@@ -27,6 +27,7 @@ int fs_setcwd(char *pathname) {
         return -1;
     }
     memcpy(cwd, temp, temp->size);
+    // freeDirectory(ppi.parent)
     
     // Determine the new path name
     char* newPath;
@@ -56,7 +57,7 @@ int fs_setcwd(char *pathname) {
     free(newPath);
 
     writeBlock(cwd, (cwd->size + vcb->blockSize - 1) / vcb->blockSize, cwd->location);
-    free(temp);
+    freeDirectory(temp);
 
     return 0;
 }
@@ -90,12 +91,12 @@ int fs_mkdir(const char *pathname, mode_t mode) {
     }
 
     if (vacantDE < 0) {
-        freeDirectory(ppi.parent);
         free(mutablePath);
+        freeDirectory(ppi.parent);
         return -1;
     }  
 
-    if (ppi.lastElementIndex != -1) { // directory already exist
+    if (ppi.lastElementIndex != -1) { // directory already exists
         free(mutablePath);
         freeDirectory(ppi.parent);
         return -2;
@@ -120,10 +121,8 @@ int fs_mkdir(const char *pathname, mode_t mode) {
     else if (ppi.parent->location == cwd->location) {
         cwd = ppi.parent;
     }
-    else {
-        freeDirectory(ppi.parent);
-    }
 
+    freeDirectory(ppi.parent);
     freeDirectory(newDir);
     free(mutablePath);
 
@@ -140,14 +139,13 @@ int fs_stat(const char *path, struct fs_stat *buf) {
     }
     
     int ret = parsePath(mutablePath, &ppi);
+    free(mutablePath);
     if (ret == -1) {
-        free(mutablePath);
         return -1;
     }
 
     int index = findNameInDir(ppi.parent, ppi.lastElement);
     if (index == -1) {
-        free(mutablePath);
         return -1;
     }
 
@@ -157,6 +155,8 @@ int fs_stat(const char *path, struct fs_stat *buf) {
     buf->st_createtime = ppi.parent->dateCreated;
     buf->st_modtime = ppi.parent->dateModified;
 
+
+    freeDirectory(ppi.parent);
     return 0;
 }
 
@@ -210,6 +210,7 @@ fdDir * fs_opendir(const char *pathname){
 
     fdDir *dirp = malloc(sizeof(dirp));
     if (dirp == NULL) {
+        freeDirectory(ppi.parent);
         return NULL;
     }
 
@@ -237,12 +238,9 @@ fdDir * fs_opendir(const char *pathname){
 
 }
 
-int fs_closedir(fdDir *dirp){
-
-    // if(dirp == NULL){
-    //     return -1;
-    // }
-    //	free(dirp->directory);
+int fs_closedir(fdDir *dirp)
+{
+    freeDirectory(dirp->directory);
     free(dirp->di);
 	free(dirp);
 
