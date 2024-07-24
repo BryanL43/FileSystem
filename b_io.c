@@ -214,6 +214,7 @@ int b_write (b_io_fd fd, char * buffer, int count) {
 
     b_fcb* fcb = &fcbArray[fd];
 
+	int location = fcb->fi->location; //stores the location temporarily
     int bytesInBlock; // The space the file occupies on disk
     int part1, part2, part3;
     int numberOfBlocksToWrite;
@@ -233,9 +234,16 @@ int b_write (b_io_fd fd, char * buffer, int count) {
 	int blocksNeeded = (remainingSpace + vcb->blockSize - 1) / vcb->blockSize;
 
 	if (blocksNeeded > 0) {
+		printf("blocksNeeded: %d\n", blocksNeeded);
 		newFreeIndex = getFreeBlocks(blocksNeeded, 0);
-		fcb->currentBlock = newFreeIndex;
-		fcb->fi->location = newFreeIndex;
+		int lastBlock = seekBlock(fcb->blockSize, location);
+
+		if (location == -2) {
+			fcb->currentBlock = newFreeIndex;
+			fcb->fi->location = newFreeIndex;
+		} else {
+			FAT[lastBlock] = newFreeIndex;
+		}
 		fcb->blockSize += blocksNeeded;
 	}
     
@@ -252,11 +260,7 @@ int b_write (b_io_fd fd, char * buffer, int count) {
     }
 
     if (part1 > 0) {
-        printf("Fired part 1\n");
-		printf("fcb->index: %d\n", fcb->index);
-		printf("buffer: %s\n", buffer);
         memcpy(fcb->buf + fcb->index, buffer, part1);
-		printf("fcb->buf: %s\n", fcb->buf);
         writeBlock(fcb->buf, 1, fcb->currentBlock);
         fcb->index += part1;
     }
