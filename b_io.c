@@ -317,6 +317,16 @@ int b_write (b_io_fd fd, char * buffer, int count) {
 //  +-------------+------------------------------------------------+--------+
 int b_read (b_io_fd fd, char * buffer, int count) {
 
+
+// bryan section temp
+//  +-------------+------------------------------------------------+--------+
+	int bytesRead;
+	int bytesReturned;
+	int part, part2, part3;
+	int numberOfBlocksToCopy;
+	int remainingBytesInMyBuffer;
+	
+
 	if (startup == 0) b_init(); // Initialize our system
 
 	// check that fd is between 0 and (MAXFCBS-1)
@@ -329,7 +339,85 @@ int b_read (b_io_fd fd, char * buffer, int count) {
 		return -1;
 	}
 
+	// the meat and potates here
+	
+	b_fcb fcb = fcbArray[fd];
+
+	// number of bytes avaiable to copy from buffer
+	remainingBytesInMyBuffer = fcb.buflen - fcb.index;
+
+	//Limit count to file length
+	int amountAlreadyDelivered = (fcb.currentBlock * B_CHUNK_SIZE) - remainingBytesInMyBuffer;
+	if((count + amountAlreadyDelivered) > fcb.fi->size){
+		count = fcb.fi->size = amountAlreadyDelivered;
+
+		if(count < 0){
+			//testing use only
+			printf("ERROR: Count: %d - Delivered: %d - CurBlk: %d = Index: %d\n",
+			amountAlreadyDelivered, fcb.currentBlock, fcb.index);
+		}
+	}
+
+	//part 1:
+	if(remainingBytesInMyBuffer >= count){
+		part = count;
+		part2 = 0;
+		part3 = 0;
+	}
+	else
+	{
+		part = remainingBytesInMyBuffer;
+
+		part3 = count - remainingBytesInMyBuffer;
+
+		numberOfBlocksToCopy = part3/ B_CHUNK_SIZE;
+		part2 = numberOfBlocksToCopy * B_CHUNK_SIZE;
+
+		part3 = part3 - part2;
+	}
+
+	if(part > 0){
+		memcpy(buffer, fcb.buf + fcb.index, part);
+		fcb.index = fcb.index + part;
+	}
+
+	if(part2 > 0){
+		bytesRead = LBAread(buffer+part,numberOfBlocksToCopy,fcb.currentBlock + fcb.fi->location);
+
+		fcb.currentBlock += numberOfBlocksToCopy;
+		part2 = bytesRead * B_CHUNK_SIZE;
+	}
+
+	if (part3 > 0){
+		bytesRead = LBAread(fcb.buf, 1, fcb.currentBlock + fcb.fi->location);
+
+		bytesRead = bytesRead * B_CHUNK_SIZE;
+
+		fcb.currentBlock += 1;
+
+		fcb.index = 0;
+		fcb.buflen = bytesRead;
+
+		if (bytesRead < part3)
+		{
+			part3 = bytesRead;
+		}
+
+		if (part3 > 0)
+		{
+			memcpy(buffer + part + part2, fcb.buf = fcb.index,part3);
+			fcb.index = fcb.index + part3;
+		}
+	}
+	
+	bytesReturned = part + part2 + part3;
+
+	return bytesReturned;
+	
 	return 0;
+//+-------------+------------------------------------------------+--------+
+
+// matt attempt
 
 // 	b_fcb *fcb = &fcbArray[fd];
 // 	int bytesRead = 0;
