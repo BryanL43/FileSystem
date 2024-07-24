@@ -134,8 +134,6 @@ b_io_fd b_open(char* filename, int flags) {
 			free(temp);
 			return -1;
 		}
-
-		free(temp);
 	}
 
 	// Truncate a file (requires write access)
@@ -219,7 +217,8 @@ int b_write (b_io_fd fd, char * buffer, int count) {
     int bytesInBlock; // The space the file occupies on disk
     int part1, part2, part3;
     int numberOfBlocksToWrite;
-    
+	int newFreeIndex;
+
     // Calculate the amount of free space in file block(s)
     if (fcb->fi->size <= 0) {
         fcb->fi->size = 0;
@@ -229,26 +228,16 @@ int b_write (b_io_fd fd, char * buffer, int count) {
         bytesInBlock = fcb->buflen - fcb->index;
     }
 	
-    int remainingSpace = (fcb->fi->size + count) - (fcb->blockSize * vcb->blockSize);
-	printf("fcb.fi.location: %d\n", fcb->fi->location);
-    int newBlocksRequired = (remainingSpace + vcb->blockSize - 1) / vcb->blockSize;
-	printf("fcb.fi.location: %d\n", fcb->fi->location);
-
     // Grow file size if necessary
-    if (newBlocksRequired > 0) {
-        newBlocksRequired = newBlocksRequired > fcb->blockSize ? newBlocksRequired : fcb->blockSize;
-        int newBlocks = getFreeBlocks(1, 0);
-		
-        int lastBlockInDisk = seekBlock(newBlocksRequired, fcb->fi->location);
-        if (fcb->fi->location == -2) { // Fresh file data in disk
-            fcb->currentBlock = newBlocks;
-            fcb->fi->location = newBlocks;
-        } else { // Existing file data in disk
-			printf("lastBlockInDisk: %d\n", lastBlockInDisk);
-            FAT[lastBlockInDisk] = newBlocks;
-        }
-        fcb->blockSize += newBlocksRequired;
-    }
+    int remainingSpace = (fcb->fi->size + count) - (fcb->blockSize * vcb->blockSize);
+	int blocksNeeded = (remainingSpace + vcb->blockSize - 1) / vcb->blockSize;
+
+	if (blocksNeeded > 0) {
+		newFreeIndex = getFreeBlocks(blocksNeeded, 0);
+		fcb->currentBlock = newFreeIndex;
+		fcb->fi->location = newFreeIndex;
+		fcb->blockSize += blocksNeeded;
+	}
     
     if (bytesInBlock >= count) {
         part1 = count;
@@ -263,19 +252,24 @@ int b_write (b_io_fd fd, char * buffer, int count) {
     }
 
     if (part1 > 0) {
-        printf("amogus\n");
+        printf("Fired part 1\n");
+		printf("fcb->index: %d\n", fcb->index);
+		printf("buffer: %s\n", buffer);
         memcpy(fcb->buf + fcb->index, buffer, part1);
+		printf("fcb->buf: %s\n", fcb->buf);
         writeBlock(fcb->buf, 1, fcb->currentBlock);
         fcb->index += part1;
     }
 
     if (part2 > 0) {
+		printf("Fired part 2\n");
         int blocksWritten = writeBlock(buffer + part1, numberOfBlocksToWrite, fcb->currentBlock);
         fcb->currentBlock = seekBlock(numberOfBlocksToWrite, fcb->currentBlock);
         part2 = blocksWritten * vcb->blockSize;
     }
 
     if (part3 > 0) {
+		printf("Fired part 3\n");
         memcpy(fcb->buf, buffer + part1 + part2, part3);
         fcb->currentBlock = seekBlock(1, fcb->currentBlock);
         writeBlock(fcb->buf, 1, fcb->currentBlock);
@@ -286,13 +280,11 @@ int b_write (b_io_fd fd, char * buffer, int count) {
 
     // Update Directory Entry in parent
     fcbArray[fd] = *fcb;
-    struct DirectoryEntry* parent = fcb->parent;
-    parent[fcb->fileIndex].size = fcb->fi->size;
-    parent[fcb->fileIndex].location = fcb->fi->location;
-    parent[fcb->fileIndex].isDirectory = fcb->fi->isDirectory;
+	fcb->parent[fcb->fileIndex].location = newFreeIndex;
+	fcb->parent[fcb->fileIndex].size = fcb->fi->size;
 
-    int parentSizeInBlocks = (parent->size + vcb->blockSize - 1) / vcb->blockSize;
-    writeBlock(parent, parentSizeInBlocks, parent->location);
+	int parentSizeInBlocks = (fcb->parent->size + vcb->blockSize - 1) / vcb->blockSize;
+    writeBlock(fcb->parent, parentSizeInBlocks, fcb->parent->location);
     
     return part1 + part2 + part3;
 }
@@ -428,6 +420,7 @@ int b_close (b_io_fd fd) {
 	}
 
 	fcbArray[fd].fi = NULL;
+	free(fcbArray[fd].parent);
 	free(fcbArray[fd].buf);
 	fcbArray[fd].buf = NULL;
 
