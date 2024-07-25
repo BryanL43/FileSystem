@@ -276,7 +276,111 @@ int b_write (b_io_fd fd, char * buffer, int count) {
 //  |             |                                                |        |
 //  | Part1       |  Part 2                                        | Part3  |
 //  +-------------+------------------------------------------------+--------+
+int b_read(b_io_fd fd, char *buffer, int count) {
+    int bytesRead = 0;       // Bytes read in each operation
+    int bytesReturned = 0;   // Total bytes returned
+    int part = 0, part2 = 0, part3 = 0;  // Parts to read
+    int numberOfBlocksToCopy = 0;  // Blocks to read
+    int remainingBytesInMyBuffer = 0;  // Remaining bytes in buffer
+    
+    if (startup == 0) b_init(); // Initialize system if needed
 
+    // Validate file descriptor
+    if ((fd < 0) || (fd >= MAXFCBS)) {
+        return -1; // Invalid file descriptor
+    }
+
+    // Check if file is open
+    if (fcbArray[fd].fi == NULL) { 
+        return -1; // File not open for this descriptor
+    }
+
+    // Check if file is open in write-only mode
+    if (fcbArray[fd].activeFlags & O_WRONLY) {
+        return -1; // File is write-only, cannot read
+    }
+
+    // Use a pointer to modify the global fcb
+    b_fcb *fcb = &fcbArray[fd];  
+
+    // Calculate remaining bytes in buffer
+    remainingBytesInMyBuffer = fcb->buflen - fcb->index;
+
+    // Calculate amount already delivered to ensure count doesn't exceed file size
+    int amountAlreadyDelivered = (fcb->currentBlock * B_CHUNK_SIZE) - remainingBytesInMyBuffer;
+    
+    // Adjust count to ensure we don't read beyond the file size
+    if ((count + amountAlreadyDelivered) > fcb->fi->size) {
+        count = fcb->fi->size - amountAlreadyDelivered;
+        if (count < 0) {
+            return -1;
+        }
+    }
+
+    // Determine how many parts need to be read
+    if (remainingBytesInMyBuffer >= count) {
+        part = count;
+        part2 = 0;
+        part3 = 0;
+    } else {
+        part = remainingBytesInMyBuffer;
+        part3 = count - remainingBytesInMyBuffer;
+        numberOfBlocksToCopy = part3 / B_CHUNK_SIZE;
+        part2 = numberOfBlocksToCopy * B_CHUNK_SIZE;
+        part3 = part3 - part2;
+    }
+
+    // Read the first part from the current buffer
+    if (part > 0) {
+        if (fcb->index < fcb->buflen) {
+            memcpy(buffer, fcb->buf + fcb->index, part);
+            fcb->index += part;
+            bytesReturned += part;
+        } else {
+            return -1; // Error: trying to read beyond available buffer
+        }
+    }
+
+    // Read part2 directly from the disk if needed
+    if (part2 > 0) {
+        bytesRead = readBlock(buffer + part, numberOfBlocksToCopy, fcb->currentBlock + fcb->fi->location);
+
+        // Ensure read was successful
+        if (bytesRead < numberOfBlocksToCopy) {
+            part2 = bytesRead * B_CHUNK_SIZE;
+        }
+
+        fcb->currentBlock += bytesRead;
+        bytesReturned += part2;
+    }
+
+    // Read any remaining bytes into the buffer
+    if (part3 > 0) {
+        bytesRead = readBlock(fcb->buf, 1, fcb->currentBlock + fcb->fi->location);
+
+        // Check if read was successful
+        if (bytesRead <= 0) {
+            return -1; // Error: read failed or no more data
+        }
+
+        fcb->currentBlock += 1;
+        fcb->index = 0;
+        fcb->buflen = bytesRead * B_CHUNK_SIZE;
+
+        if (bytesRead * B_CHUNK_SIZE < part3) {
+            part3 = bytesRead * B_CHUNK_SIZE;
+        }
+
+        if (part3 > 0) {
+            memcpy(buffer + part + part2, fcb->buf + fcb->index, part3);
+            fcb->index += part3;
+            bytesReturned += part3;
+        }
+    }
+
+    // Return total bytes read
+    return bytesReturned;
+}
 
 
 
