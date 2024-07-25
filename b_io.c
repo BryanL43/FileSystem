@@ -240,14 +240,12 @@ int b_write (b_io_fd fd, char * buffer, int count) {
 	free(temp);
 
 
-
-
     fcb->fi->size += count;
 
     // Update Directory Entry in parent
     fcbArray[fd] = *fcb;
 	fcb->parent[fcb->fileIndex].size = fcb->fi->size;
-	fcb->parent[fcb->fileIndex].dateModified = time;
+	fcb->parent[fcb->fileIndex].dateModified = currentTime;
 
 	int parentSizeInBlocks = (fcb->parent->size + vcb->blockSize - 1) / vcb->blockSize;
     writeBlock(fcb->parent, parentSizeInBlocks, fcb->parent->location);

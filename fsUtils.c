@@ -293,11 +293,11 @@ int parsePath(char* path, ppInfo* ppi) {
 }
 
 int deleteBlob(ppInfo ppi) {
-    int locationOfFile = ppi.parent[ppi.lastElementIndex].location;
-    int sizeOfFile = (ppi.parent[ppi.lastElementIndex].size + vcb->blockSize - 1) / vcb->blockSize;
     if (ppi.lastElementIndex == -1) {
         return -1;
     }
+    int locationOfFile = ppi.parent[ppi.lastElementIndex].location;
+    int sizeOfFile = (ppi.parent[ppi.lastElementIndex].size + vcb->blockSize - 1) / vcb->blockSize;
 
     // Special case to determine how to clear sentinel value
     if (sizeOfFile == 1) {
@@ -306,7 +306,7 @@ int deleteBlob(ppInfo ppi) {
         vcb->firstFreeBlock = locationOfFile;
     } else if (sizeOfFile > 1) {
         // Traverse the FAT until it reaches the sentinel value
-        int endOfFileIndex = seekBlock(sizeOfFile, locationOfFile);
+        int endOfFileIndex = seekBlock(sizeOfFile/vcb->blockSize, locationOfFile);
         if (endOfFileIndex < 0) {
             return -1;
         }
@@ -339,4 +339,13 @@ int createFile(char *path, ppInfo* ppi) {
     
     int blocksToWrite = (ppi->parent->size + vcb->blockSize - 1) / vcb->blockSize;
     writeBlock(ppi->parent, blocksToWrite, ppi->parent->location);
+}
+
+int updateWorkingDir(ppInfo ppi) {
+    if (ppi.parent->location == root->location) {
+        root = ppi.parent;
+    }
+    else if (ppi.parent->location == cwd->location) {
+        cwd = ppi.parent;
+    }
 }

@@ -114,13 +114,7 @@ int fs_mkdir(const char *pathname, mode_t mode) {
 
     writeBlock(ppi.parent, (ppi.parent->size + vcb->blockSize - 1) / vcb->blockSize, ppi.parent->location);
 
-
-    if (ppi.parent->location == root->location) {
-        root = ppi.parent;
-    }
-    else if (ppi.parent->location == cwd->location) {
-        cwd = ppi.parent;
-    }
+    updateWorkingDir(ppi);
 
     freeDirectory(ppi.parent);
     freeDirectory(newDir);
@@ -285,10 +279,14 @@ struct fs_diriteminfo *fs_readdir(fdDir *dirp)
 
 int fs_delete(char* filename) {
     ppInfo ppi;
-
     // Make a mutable copy of the pathname (discards const for warning issue)
     char* path = strdup(filename);
     if (path == NULL) {
+        return -1;
+    }
+    // Populate ppInfo
+    if (parsePath(path, &ppi) == -1) {
+        free(path);
         return -1;
     }
 
@@ -297,16 +295,12 @@ int fs_delete(char* filename) {
         free(path);
         return -1;
     }
-    // Populate ppInfo
-    if (parsePath(path, &ppi) == -1) {
-        free(path);
-        return -1;
-    }
+    
     // Loading ppInfo into variables
     int index = ppi.lastElementIndex;
 
     // Mark the deleted file as unused
-    ppi.parent[index].location = -2;
+    ppi.parent[index].location = -1;
 
     // Write the new parent directory with deleted file into disk
     int sizeOfParentDir = (ppi.parent[0].size + vcb->blockSize - 1) / vcb->blockSize;
