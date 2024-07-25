@@ -170,6 +170,7 @@ int b_seek (b_io_fd fd, off_t offset, int whence) {
 
 // Interface to write function    
 int b_write (b_io_fd fd, char * buffer, int count) {
+	time_t currentTime = time(NULL);
     if (startup == 0) b_init();  //Initialize our system
 
     // check that fd is between 0, (MAXFCBS-1), active fd, and valid length
@@ -190,21 +191,20 @@ int b_write (b_io_fd fd, char * buffer, int count) {
 
 	fcb->buflen = vcb->blockSize;
     // Grow file size if necessary
-
-	if (fcb->index + count > fcb->buflen || location == -2) {
-		// printf("size :%d\n", fcb->fi->size);
-		// int bytesNeeded = count - (fcb->buflen - fcb->fi->size);
-		// int blocksNeeded = (count + vcb->blockSize - 1) / vcb->blockSize;
-		// printf("Bytes needed: %d\n", bytesNeeded);
-		// printf("Blocks needed: %d\n", blocksNeeded);
+	if (location == -2) {
 		int newFreeIndex = getFreeBlocks(1, 0);
-
-		if (location == -2) {
-			fcb->currentBlock = newFreeIndex;
-			fcb->fi->location = newFreeIndex;
-			fcb->parent[fcb->fileIndex].location = newFreeIndex;
-		}
 		fcb->blockSize++;
+		fcb->currentBlock = newFreeIndex;
+		fcb->fi->location = newFreeIndex;
+		fcb->parent[fcb->fileIndex].location = newFreeIndex;
+	} else if (fcb->fi->size + count > fcb->blockSize * vcb->blockSize) {
+		int bytesNeeded = count - (fcb->buflen - fcb->index);
+		int blocksNeeded = (bytesNeeded + vcb->blockSize - 1) / vcb->blockSize;
+
+		// Updating the FAT values to point old sentinel value to next index
+		FAT[fcb->currentBlock] = fcb->currentBlock + 1;
+		getFreeBlocks(blocksNeeded, 0);
+		fcb->blockSize += blocksNeeded;
 	}
 
 	// Writing in blocks at a time
@@ -227,7 +227,6 @@ int b_write (b_io_fd fd, char * buffer, int count) {
 
 		buffer += remainingBytes;
 		fcb->currentBlock++;
-		fcb->blockSize++;
 
 		// Write the remaining bytes into our buffer
 		memcpy(fcb->buf, buffer, count - remainingBytes);
@@ -248,6 +247,7 @@ int b_write (b_io_fd fd, char * buffer, int count) {
     // Update Directory Entry in parent
     fcbArray[fd] = *fcb;
 	fcb->parent[fcb->fileIndex].size = fcb->fi->size;
+	fcb->parent[fcb->fileIndex].dateModified = time;
 
 	int parentSizeInBlocks = (fcb->parent->size + vcb->blockSize - 1) / vcb->blockSize;
     writeBlock(fcb->parent, parentSizeInBlocks, fcb->parent->location);
