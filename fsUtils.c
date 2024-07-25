@@ -335,6 +335,7 @@ int createFile(char *path, ppInfo* ppi) {
     ppi->parent[vacantDE].location = -2;
     strncpy(ppi->parent[vacantDE].name, ppi->lastElement, sizeof(ppi->parent[vacantDE].name));
     ppi->parent[vacantDE].size = 0;
+    ppi->lastElementIndex = vacantDE;
     
     int blocksToWrite = (ppi->parent->size + vcb->blockSize - 1) / vcb->blockSize;
     writeBlock(ppi->parent, blocksToWrite, ppi->parent->location);
