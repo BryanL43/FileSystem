@@ -426,23 +426,31 @@ int fs_move(char *srcPathName, char* destPathName) {
     ppiDest.parent[destElementIndex].dateCreated = ppiSrc.parent[srcElementIndex].dateCreated;
     ppiDest.parent[destElementIndex].dateModified = ppiSrc.parent[srcElementIndex].dateModified;
     ppiDest.parent[destElementIndex].isDirectory = ppiSrc.parent[srcElementIndex].isDirectory;
-    strcpy(ppiDest.parent[destElementIndex].name, ppiSrc.parent[srcElementIndex].name);
+    strcpy(ppiDest.parent[destElementIndex].name, ppiDest.lastElement);
     ppiDest.parent[destElementIndex].size = ppiSrc.parent[srcElementIndex].size;
     ppiDest.parent[destElementIndex].location = ppiSrc.parent[srcElementIndex].location;
 
     ppiSrc.parent[srcElementIndex].size = 0;
     ppiSrc.parent[srcElementIndex].location = -1;
 
-    // Write new DEs to disk
     int sizeOfDestDirectory = (ppiDest.parent->size + vcb->blockSize - 1) / vcb->blockSize;
-    if (writeBlock(ppiDest.parent, sizeOfDestDirectory, ppiDest.parent->location) == -1) {
-        return -1;
-    }
-
     int sizeOfSrcDirectory = (ppiSrc.parent->size + vcb->blockSize - 1) / vcb->blockSize;
-    if (writeBlock(ppiSrc.parent, sizeOfSrcDirectory, ppiSrc.parent->location) == -1) {
-        return -1;
-    }
+
+    if (ppiDest.parent->location == ppiSrc.parent->location) {
+        ppiDest.parent[srcElementIndex].size = 0;
+        ppiDest.parent[srcElementIndex].location = -1;
+        if (writeBlock(ppiDest.parent, sizeOfDestDirectory, ppiDest.parent->location) == -1) {
+            return -1;
+        }
+    } else {
+        if (writeBlock(ppiDest.parent, sizeOfDestDirectory, ppiDest.parent->location) == -1) {
+            return -1;
+        }
+
+        if (writeBlock(ppiSrc.parent, sizeOfSrcDirectory, ppiSrc.parent->location) == -1) {
+            return -1;
+        }
+    }   
     
     return 0;
 }
