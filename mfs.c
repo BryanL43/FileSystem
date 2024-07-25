@@ -339,26 +339,10 @@ int fs_rmdir(const char *pathname) {
         return -1;
     }
 
-    // Creating an empty buffer to overwrite contents in disk
-    char *emptyBlocks = malloc(sizeOfDir * vcb->blockSize);
-    if (emptyBlocks == NULL) {
-        free(emptyBlocks);
-        free(path);
-        return -1;
-    }
-
     // Load directory for empty check
     DirectoryEntry* directoryToDelete = loadDir(&(ppi.parent[ppi.lastElementIndex]));
     if(isDirEmpty(directoryToDelete) == -1) {
         // When the directory is not empty, return error
-        free(emptyBlocks);
-        free(path);
-        return -1;
-    }
-
-    // Deleting dir in disk
-    if (writeBlock(emptyBlocks, sizeOfDir, locationOfDir) == -1) {
-        free(emptyBlocks);
         free(path);
         return -1;
     }
@@ -368,11 +352,10 @@ int fs_rmdir(const char *pathname) {
         // Clearing the sentinel value
         FAT[locationOfDir] = vcb->firstFreeBlock;
         vcb->firstFreeBlock = locationOfDir;
-    } else {
+    } else  if (sizeOfDir > 1) {
         // Traverse the FAT until it reaches the sentinel value
         int endOfDirIndex = seekBlock(sizeOfDir, locationOfDir);
         if (endOfDirIndex < 0) {
-            free(emptyBlocks);
             free(path);
             return -1;
         }
@@ -383,30 +366,22 @@ int fs_rmdir(const char *pathname) {
     
     // Write updated FAT to disk
     if (writeBlock(FAT, vcb->freeSpaceSize, vcb->freeSpaceLocation) == -1) {
-        free(emptyBlocks);
         free(path);
         return -1;
     }
 
     // Mark the deleted directory as unused
     ppi.parent[index].location = -1;
-    
-    // Clearing the name and isDirectory in the parent directory
-    // for hexdump to easily show empty directories
-    memcpy(ppi.parent[index].name, emptyBlocks, sizeof(ppi.parent[index].name));
-    ppi.parent[index].isDirectory = '\0';
 
     // Write the new parent directory with deleted directory into disk
     int sizeOfDirectory = (ppi.parent[0].size + vcb->blockSize - 1) / vcb->blockSize;
     if (writeBlock(ppi.parent, sizeOfDirectory, ppi.parent[0].location) == -1) {
-        free(emptyBlocks);
         free(path);
         return -1;
     }
 
     // Freeing buffers
     freeDirectory(ppi.parent);
-    free(emptyBlocks);
     free(path);
     return 0;
 }
@@ -429,50 +404,45 @@ int fs_move(char *srcPathName, char* destPathName) {
         return -1;
     }
 
-    if (fs_mkdir(destPath, 0777) == -1) {
-        return -1;
-    }
-
     if (parsePath(destPath, &ppiDest) == -1) {
         return -1;
     }
 
+
+    // if (fs_mkdir(destPath, 0777) == -1) {
+    //     return -1;
+    // }
+
+    int vacantDE = findUnusedDE(ppiDest.parent);
+    if (vacantDE == -1) {
+		ppiDest.parent = expandDirectory(ppiDest.parent);
+		vacantDE = findUnusedDE(ppiDest.parent);
+	}
+    
+
     int srcElementIndex = ppiSrc.lastElementIndex;
-    int destElementIndex = ppiDest.lastElementIndex;
+    int destElementIndex = vacantDE;
 
-    ppiDest.parent[destElementIndex].dateCreated = ppiSrc.parent[ppiSrc.lastElementIndex].dateCreated;
-    ppiDest.parent[destElementIndex].dateModified = ppiSrc.parent[ppiSrc.lastElementIndex].dateModified;
-    ppiDest.parent[destElementIndex].isDirectory = ppiSrc.parent[ppiSrc.lastElementIndex].isDirectory;
-    strcpy(ppiDest.parent[destElementIndex].name, ppiSrc.parent[ppiSrc.lastElementIndex].name);
-    ppiDest.parent[destElementIndex].size = ppiSrc.parent[ppiSrc.lastElementIndex].size;
+    ppiDest.parent[destElementIndex].dateCreated = ppiSrc.parent[srcElementIndex].dateCreated;
+    ppiDest.parent[destElementIndex].dateModified = ppiSrc.parent[srcElementIndex].dateModified;
+    ppiDest.parent[destElementIndex].isDirectory = ppiSrc.parent[srcElementIndex].isDirectory;
+    strcpy(ppiDest.parent[destElementIndex].name, ppiSrc.parent[srcElementIndex].name);
+    ppiDest.parent[destElementIndex].size = ppiSrc.parent[srcElementIndex].size;
+    ppiDest.parent[destElementIndex].location = ppiSrc.parent[srcElementIndex].location;
 
-    // Write new DE to disk
-    int sizeOfDirectory = (ppiDest.parent[0].size + vcb->blockSize - 1) / vcb->blockSize;
-    if (writeBlock(ppiDest.parent, sizeOfDirectory, ppiDest.parent[0].location) == -1) {
+    ppiSrc.parent[srcElementIndex].size = 0;
+    ppiSrc.parent[srcElementIndex].location = -1;
+
+    // Write new DEs to disk
+    int sizeOfDestDirectory = (ppiDest.parent->size + vcb->blockSize - 1) / vcb->blockSize;
+    if (writeBlock(ppiDest.parent, sizeOfDestDirectory, ppiDest.parent->location) == -1) {
         return -1;
     }
 
-    // Write the actual file to disk
-    DirectoryEntry* destDirectory = loadDir(&(ppiDest.parent[ppiDest.lastElementIndex]));
-    if (destDirectory == NULL) {
+    int sizeOfSrcDirectory = (ppiSrc.parent->size + vcb->blockSize - 1) / vcb->blockSize;
+    if (writeBlock(ppiSrc.parent, sizeOfSrcDirectory, ppiSrc.parent->location) == -1) {
         return -1;
     }
-
-    int location = ppiDest.parent[destElementIndex].location;
-    int size = (ppiDest.parent[destElementIndex].size + vcb->blockSize - 1) / vcb->blockSize;
-    if (writeBlock(destDirectory, size, location) == -1) {
-        return -1;
-    }
-
-    // Remove src DE
-    if (fs_isDir) {
-        if (fs_rmdir(srcPath) == -1) {
-            return -1;
-        }
-    } else if (fs_isFile) {
-        if (fs_delete(srcPath) == -1) {
-            return -1;
-        }
-    }
+    
     return 0;
 }

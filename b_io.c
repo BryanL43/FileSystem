@@ -113,14 +113,13 @@ b_io_fd b_open(char* filename, int flags) {
 	if (ppi.lastElementIndex > 0 && (flags & O_TRUNC) && (flags & O_WRONLY)) {
 		printf("Truncate fired!\n");
 		// Populate the file information
-		// file = ppi.parent[ppi.lastElementIndex];
-		// file.location = -2;
-		// file.size = 0;
+		ppi.parent[ppi.lastElementIndex].location = -2;
+		ppi.parent[ppi.lastElementIndex].size = 0;
 
 		// Initialize variable information needed for b_read/b_write
-		// fcb.index = fcb.buflen = fcb.currentBlock = fcb.blockSize = 0;
+		fcb.index = fcb.buflen = fcb.currentBlock = fcb.blockSize = 0;
 
-		// deleteBlob(ppi);
+		deleteBlob(ppi);
 	}
 	
 	// Append a file
@@ -200,6 +199,10 @@ int b_write (b_io_fd fd, char * buffer, int count) {
 	} else if (fcb->fi->size + count > fcb->blockSize * vcb->blockSize) {
 		int bytesNeeded = count - (fcb->buflen - fcb->index);
 		int blocksNeeded = (bytesNeeded + vcb->blockSize - 1) / vcb->blockSize;
+
+		// TODO:
+		// For loop looping through the FAT table using seekBlock till the end, every iteration changes the FAT value
+
 
 		// Updating the FAT values to point old sentinel value to next index
 		FAT[fcb->currentBlock] = fcb->currentBlock + 1;
