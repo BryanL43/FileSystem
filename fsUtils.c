@@ -321,3 +321,21 @@ int deleteBlob(ppInfo ppi) {
     
     return 0;
 }
+
+int createFile(char *path, ppInfo* ppi) {
+    time_t currentTime = time(NULL);
+    int vacantDE = findUnusedDE(ppi->parent);
+    if (vacantDE == -1) {
+		ppi->parent = expandDirectory(ppi->parent);
+		vacantDE = findUnusedDE(ppi->parent);
+	}
+    ppi->parent[vacantDE].dateCreated = currentTime;
+    ppi->parent[vacantDE].dateModified = currentTime;
+    ppi->parent[vacantDE].isDirectory = ' ';
+    ppi->parent[vacantDE].location = -2;
+    strncpy(ppi->parent[vacantDE].name, ppi->lastElement, sizeof(ppi->parent[vacantDE].name));
+    ppi->parent[vacantDE].size = 0;
+    
+    int blocksToWrite = (ppi->parent->size + vcb->blockSize - 1) / vcb->blockSize;
+    writeBlock(ppi->parent, blocksToWrite, ppi->parent->location);
+}

@@ -99,8 +99,8 @@ int getFreeBlocks(uint64_t numberOfBlocks, uint64_t last_block_in_file) {
 /**
  * Write block to volume.
  * 
- * @param numberOfBlocks The number of blocks to write.
  * @param buffer Pointer to the buffer with data to be written.
+ * @param numberOfBlocks The number of blocks to write.
  * @param location The starting location of where the blocks are read from.
  * @return Returns the number of blocks successfully written, or -1 if an error occurs.
 */

@@ -86,68 +86,40 @@ b_io_fd b_open(char* filename, int flags) {
 
 	b_io_fd returnFd;
 	ppInfo ppi;
-
-	DirectoryEntry file; //holds the temp file that will be placed into fcb.fi
 	
 	returnFd = b_getFCB(); // get our own file descriptor
 	if (returnFd == -1) { // check for error - all used FCB's
 		return returnFd;
 	}
 
-	if (parsePath(filename, &ppi) == -1) {
-        return -1;
-    }
-
 	// Check if last element index is a directory
-	if (ppi.lastElementIndex > 0 && ppi.parent[ppi.lastElementIndex].isDirectory == 'd') {
+	if (fs_isDir(filename)) {
 		return -1;
 	}
 
 	b_fcb fcb = fcbArray[returnFd];
 
+	if (parsePath(filename, &ppi) == -1) {
+        return -1;
+    }
+
 	// Create a file if it doesn't exist
 	if (ppi.lastElementIndex == -1 && flags & O_CREAT) {
-		printf("Create fired!\n");
-		// Populate the file information
-		strncpy(file.name, ppi.lastElement, sizeof(file.name));
-		file.size = 0;
-		file.location = -2; // Special sentinel to indicate fresh file with 0 size
-		file.isDirectory = ' ';
-		time_t currTime = time(NULL);
-		file.dateCreated = currTime;
-		file.dateModified = currTime;
-
-		// Initialize variable information needed for b_read/b_write
-		DirectoryEntry* temp = loadDir(ppi.parent);
-    	ppi.parent = temp;
-
-		fcb.fileIndex = findUnusedDE(ppi.parent);
-		if (fcb.fileIndex == -1) {
-			ppi.parent = expandDirectory(ppi.parent);
-        	fcb.fileIndex = findUnusedDE(ppi.parent);
-		}
-
-		// Fatal error if no vacant entry spot is found
-		if (fcb.fileIndex < 0) {
-			fcb.fi = NULL;
-			free(fcb.buf);
-			free(temp);
-			return -1;
-		}
+		createFile(filename, &ppi);
 	}
 
 	// Truncate a file (requires write access)
 	if (ppi.lastElementIndex > 0 && (flags & O_TRUNC) && (flags & O_WRONLY)) {
 		printf("Truncate fired!\n");
 		// Populate the file information
-		file = ppi.parent[ppi.lastElementIndex];
-		file.location = -2;
-		file.size = 0;
+		// file = ppi.parent[ppi.lastElementIndex];
+		// file.location = -2;
+		// file.size = 0;
 
 		// Initialize variable information needed for b_read/b_write
 		fcb.index = fcb.buflen = fcb.currentBlock = fcb.blockSize = 0;
 
-		fs_delete(ppi.lastElement);
+		deleteBlob(ppi);
 	}
 	
 	// Append a file
@@ -155,7 +127,7 @@ b_io_fd b_open(char* filename, int flags) {
 		printf("Append fired!\n");
 	}
 
-	fcb.fi = &file; //assign temp file to fcb.fi
+	fcb.fi = &ppi.parent[ppi.lastElementIndex]; //assign temp file to fcb.fi
 
 	// Instantiate file control block buffer
 	fcb.buf = malloc(vcb->blockSize);
@@ -171,11 +143,11 @@ b_io_fd b_open(char* filename, int flags) {
 	fcb.fileIndex = (fcb.fileIndex == 0) ? ppi.lastElementIndex : fcb.fileIndex;
 
 	fcb.parent = ppi.parent; //allow access to write
-	ppi.parent[fcb.fileIndex] = *fcb.fi; //dereference file information and write to disk
+	// ppi.parent[fcb.fileIndex] = *fcb.fi; //dereference file information and write to disk
 
 	// Write parent to disk for updating
-	int numOfBlocks = (ppi.parent->size + vcb->blockSize - 1) / vcb->blockSize;
-	writeBlock(ppi.parent, numOfBlocks, ppi.parent[0].location);
+	// int numOfBlocks = (ppi.parent->size + vcb->blockSize - 1) / vcb->blockSize;
+	// writeBlock(ppi.parent, numOfBlocks, ppi.parent[0].location);
 
 	fcbArray[returnFd] = fcb;
 
@@ -424,8 +396,8 @@ int b_close (b_io_fd fd) {
 	}
 
 	fcbArray[fd].fi = NULL;
-	free(fcbArray[fd].parent);
-	free(fcbArray[fd].buf);
+	// free(fcbArray[fd].parent);
+	// free(fcbArray[fd].buf);
 	fcbArray[fd].buf = NULL;
 
 	return 0;

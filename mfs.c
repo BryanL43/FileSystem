@@ -305,8 +305,8 @@ int fs_delete(char* filename) {
     // Loading ppInfo into variables
     int index = ppi.lastElementIndex;
 
-    // Mark the deleted directory as unused
-    ppi.parent[index].location = -1;
+    // Mark the deleted file as unused
+    ppi.parent[index].location = -2;
 
     // Write the new parent directory with deleted file into disk
     int sizeOfParentDir = (ppi.parent[0].size + vcb->blockSize - 1) / vcb->blockSize;
