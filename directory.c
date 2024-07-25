@@ -128,16 +128,16 @@ void freeDirectory(DirectoryEntry* dir) {
     }
 }
 
-void printDirFromMemory(DirectoryEntry* dir) {
-    for(int i = 0; i < dir->size / sizeof(DirectoryEntry); i++) {
-        printf("test[%i] location : %i\t\t", i, dir[i].location);
-        printf("test[%i] name : %s\n", i, dir[i].name);
-    }
-    printf("\n");
-}
+// void printDirFromMemory(DirectoryEntry* dir) {
+//     for(int i = 0; i < dir->size / sizeof(DirectoryEntry); i++) {
+//         printf("test[%i] location : %i\t\t", i, dir[i].location);
+//         printf("test[%i] name : %s\n", i, dir[i].name);
+//     }
+//     printf("\n");
+// }
 
-void printDirFromDisk(DirectoryEntry* dir) {
-    DirectoryEntry* test = loadDir(dir);
-    printDirFromMemory(test);
-    freeDirectory(test);
-}
+// void printDirFromDisk(DirectoryEntry* dir) {
+//     DirectoryEntry* test = loadDir(dir);
+//     printDirFromMemory(test);
+//     freeDirectory(test);
+// }

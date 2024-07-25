@@ -43,8 +43,8 @@ DirectoryEntry* expandDirectory(DirectoryEntry* directory);
 
 void freeDirectory(DirectoryEntry* dir);
 
-void printDirFromMemory(DirectoryEntry* dir);
-void printDirFromDisk(DirectoryEntry* dir);
+// void printDirFromMemory(DirectoryEntry* dir);
+// void printDirFromDisk(DirectoryEntry* dir);
 
 extern DirectoryEntry* root;
 extern DirectoryEntry* cwd;
