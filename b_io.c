@@ -111,7 +111,6 @@ b_io_fd b_open(char* filename, int flags) {
 
 	// Truncate a file (requires write access)
 	if (ppi.lastElementIndex > 0 && (flags & O_TRUNC) && (flags & O_WRONLY)) {
-		printf("Truncate fired!\n");
 		// Populate the file information
 		ppi.parent[ppi.lastElementIndex].location = -2;
 		ppi.parent[ppi.lastElementIndex].size = 0;
@@ -126,6 +125,7 @@ b_io_fd b_open(char* filename, int flags) {
 	if (flags & O_APPEND) {
 		printf("Append fired!\n");
 	}
+
 	fcb.fi = &ppi.parent[ppi.lastElementIndex]; //assign temp file to fcb.fi
 	// Instantiate file control block buffer
 	fcb.buf = malloc(vcb->blockSize);
@@ -141,12 +141,7 @@ b_io_fd b_open(char* filename, int flags) {
 	fcb.fileIndex = (fcb.fileIndex == 0) ? ppi.lastElementIndex : fcb.fileIndex;
 
 	fcb.parent = ppi.parent; //allow access to write
-	// ppi.parent[fcb.fileIndex] = *fcb.fi; //dereference file information and write to disk
-
-	// Write parent to disk for updating
-	// int numOfBlocks = (ppi.parent->size + vcb->blockSize - 1) / vcb->blockSize;
-	// writeBlock(ppi.parent, numOfBlocks, ppi.parent[0].location);
-
+	fcb.activeFlags = flags;
 	fcbArray[returnFd] = fcb;
 
 	return (returnFd);
@@ -178,7 +173,7 @@ int b_write (b_io_fd fd, char * buffer, int count) {
     }
 
     // check for valid write flag
-    if (fcbArray[fd].activeFlags & O_RDONLY) {
+    if ((fcbArray[fd].activeFlags & O_ACCMODE) == O_RDONLY) {
         printf("File is read only!\n");
         return -1;
     }
@@ -390,9 +385,9 @@ int b_close (b_io_fd fd) {
 	if (fd < 0 || fd >= MAXFCBS || fcbArray[fd].fi == NULL) {
 		return -1;
 	}
-	fcbArray[fd].buflen =0;
+	fcbArray[fd].buflen = 0;
 	fcbArray[fd].currentBlock = 0;
-	fcbArray[fd].index =0;
+	fcbArray[fd].index = 0;
 	fcbArray[fd].fi = NULL;
 	// free(fcbArray[fd].parent);
 	// free(fcbArray[fd].buf);

@@ -118,7 +118,11 @@ char* normalizePath(const char* pathname) {
             strcat(returnString, "/");
         }
     }
-    strcat(returnString, "/"); // Append "/" to end of path
+    
+    // Append "/" to end of path
+    if (strcmp(returnString, "/") != 0) {
+        strcat(returnString, "/");
+    }
 
     // Release resources
     for (int i = 0; i < size; i++) {

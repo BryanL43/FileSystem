@@ -9,8 +9,8 @@ int fs_setcwd(char *pathname) {
     ppInfo ppi;
 
     int ret = parsePath(pathname, &ppi);
-    if (ret == -1 || ppi.lastElementIndex == -1) { // parsePath returned error
-        return -1;
+    if (ret == -1 || ppi.lastElementIndex == -1 || ppi.parent[ppi.lastElementIndex].isDirectory == ' ') {
+        return -1; // parsePath returned error
     }
 
     if (ppi.lastElementIndex == -2) { // Special "root" case
