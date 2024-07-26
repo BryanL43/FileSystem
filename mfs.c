@@ -399,19 +399,13 @@ int fs_move(char *srcPathName, char* destPathName) {
         return -1;
     }
 
-    parsePath(srcPath, &ppiSrc);
-    if (ppiSrc.lastElementIndex == -1) {
+    if (parsePath(srcPath, &ppiSrc) == -1) {
         return -1;
     }
 
     if (parsePath(destPath, &ppiDest) == -1) {
         return -1;
     }
-
-
-    // if (fs_mkdir(destPath, 0777) == -1) {
-    //     return -1;
-    // }
 
     int vacantDE = findUnusedDE(ppiDest.parent);
     if (vacantDE == -1) {
@@ -423,12 +417,10 @@ int fs_move(char *srcPathName, char* destPathName) {
     int srcElementIndex = ppiSrc.lastElementIndex;
     int destElementIndex = vacantDE;
 
-    ppiDest.parent[destElementIndex].dateCreated = ppiSrc.parent[srcElementIndex].dateCreated;
-    ppiDest.parent[destElementIndex].dateModified = ppiSrc.parent[srcElementIndex].dateModified;
-    ppiDest.parent[destElementIndex].isDirectory = ppiSrc.parent[srcElementIndex].isDirectory;
-    strcpy(ppiDest.parent[destElementIndex].name, ppiDest.lastElement);
-    ppiDest.parent[destElementIndex].size = ppiSrc.parent[srcElementIndex].size;
-    ppiDest.parent[destElementIndex].location = ppiSrc.parent[srcElementIndex].location;
+    char name[sizeof(((DirectoryEntry*)0)->name)];
+    memcpy(name, ppiDest.lastElement, sizeof(name));
+    memcpy(&ppiDest.parent[vacantDE], &ppiSrc.parent[srcElementIndex], sizeof(DirectoryEntry));
+    memcpy(&ppiDest.parent[vacantDE].name, name, sizeof(name));
 
     ppiSrc.parent[srcElementIndex].size = 0;
     ppiSrc.parent[srcElementIndex].location = -1;
@@ -451,6 +443,8 @@ int fs_move(char *srcPathName, char* destPathName) {
             return -1;
         }
     }   
-    
+    updateWorkingDir(ppiDest);
+    updateWorkingDir(ppiSrc);
+
     return 0;
 }
