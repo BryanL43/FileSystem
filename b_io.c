@@ -79,22 +79,12 @@ b_io_fd b_getFCB() {
 b_io_fd b_open(char* filename, int flags) {
 	if (startup == 0) b_init();  //Initialize our system
 
-	// // Ensure flag exists
-	// if (!flags) {
-	// 	return -1;
-	// }
-
 	b_io_fd returnFd;
 	ppInfo ppi;
 	
 	returnFd = b_getFCB(); // get our own file descriptor
 	if (returnFd == -1) { // check for error - all used FCB's
 		return returnFd;
-	}
-
-	// Check if last element index is a directory
-	if (fs_isDir(filename)) {
-		return -1;
 	}
 
 	b_fcb fcb = fcbArray[returnFd];
@@ -109,6 +99,11 @@ b_io_fd b_open(char* filename, int flags) {
 		fcb.fileIndex = ppi.lastElementIndex;
 	}
 
+	// Check if last element index is a valid file if create is not specified
+	if (ppi.parent[ppi.lastElementIndex].isDirectory != ' ') {
+		return -1;
+	}
+
 	// Truncate a file (requires write access)
 	if (ppi.lastElementIndex > 0 && (flags & O_TRUNC) && (flags & O_WRONLY)) {
 		// Populate the file information
@@ -120,17 +115,17 @@ b_io_fd b_open(char* filename, int flags) {
 
 		deleteBlob(ppi);
 	}
-	
-	// Append a file
-	if (flags & O_APPEND) {
-		printf("Append fired!\n");
-	}
 
 	fcb.fi = &ppi.parent[ppi.lastElementIndex]; //assign temp file to fcb.fi
 	// Instantiate file control block buffer
 	fcb.buf = malloc(vcb->blockSize);
 	if (fcb.buf == NULL) {
 		return -1;
+	}
+
+	// Append a file
+	if (flags & O_APPEND) {
+		fcb.index = fcb.fi->size;
 	}
 
 	// Populate/verify file control block's variable
@@ -174,7 +169,6 @@ int b_write (b_io_fd fd, char * buffer, int count) {
 
     // check for valid write flag
     if ((fcbArray[fd].activeFlags & O_ACCMODE) == O_RDONLY) {
-        printf("File is read only!\n");
         return -1;
     }
 
@@ -292,8 +286,8 @@ int b_read(b_io_fd fd, char *buffer, int count) {
     }
 
     // Check if file is open in write-only mode
-    if (fcbArray[fd].activeFlags & O_WRONLY) {
-        return -1; // File is write-only, cannot read
+    if ((fcbArray[fd].activeFlags & O_ACCMODE) == O_WRONLY) {
+        return -1;
     }
 
     // Use a pointer to modify the global fcb
