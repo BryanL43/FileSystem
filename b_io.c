@@ -87,8 +87,10 @@ b_io_fd b_open(char* filename, int flags) {
 		return returnFd;
 	}
 
+	// Setting our fcb to what is stored in fcb array
 	b_fcb fcb = fcbArray[returnFd];
 
+	// Filling out ppi
 	if (parsePath(filename, &ppi) == -1) {
         return -1;
     }
@@ -178,20 +180,22 @@ int b_write (b_io_fd fd, char * buffer, int count) {
 	int part1, part2, part3;
 
 	fcb->buflen = vcb->blockSize;
+
+
     // Grow file size if necessary
-	if (location == -2) {
+	if (location == -2) { // When the file doesn't take up space in disk
 		int newFreeIndex = getFreeBlocks(1, 0);
 		fcb->blockSize++;
+
+		// Set index to start writing based on free space
 		fcb->currentBlock = newFreeIndex;
 		fcb->fi->location = newFreeIndex;
 		fcb->parent[fcb->fileIndex].location = newFreeIndex;
+
+	// When the file already exist and needs to write more
 	} else if (fcb->fi->size + count > fcb->blockSize * vcb->blockSize) {
 		int bytesNeeded = count - (fcb->buflen - fcb->index);
 		int blocksNeeded = (bytesNeeded + vcb->blockSize - 1) / vcb->blockSize;
-
-		// TODO:
-		// For loop looping through the FAT table using seekBlock till the end, every iteration changes the FAT value
-
 
 		// Updating the FAT values to point old sentinel value to next index
 		FAT[fcb->currentBlock] = fcb->currentBlock + 1;
@@ -213,14 +217,17 @@ int b_write (b_io_fd fd, char * buffer, int count) {
 		fcb->index += count;
 	} else { // Our buffer is full but there are more data to be filled
 		int remainingBytes = fcb->buflen - fcb->index;
+
+		// Completing filling our buffer
 		memcpy(fcb->buf + fcb->index, buffer, remainingBytes);
+
 		// Commit the full buffer
 		writeBlock(fcb->buf, 1, fcb->currentBlock);
 
 		buffer += remainingBytes;
 		fcb->currentBlock++;
 
-		// Write the remaining bytes into our buffer
+		// Copy the remaining bytes into our buffer
 		memcpy(fcb->buf, buffer, count - remainingBytes);
 		fcb->index = count - remainingBytes;
 	}

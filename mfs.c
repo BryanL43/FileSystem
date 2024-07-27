@@ -290,6 +290,7 @@ int fs_delete(char* filename) {
         return -1;
     }
 
+    // Deleting the file without touching directory
     if(deleteBlob(ppi) == -1)
     {
         free(path);
@@ -390,6 +391,7 @@ int fs_move(char *srcPathName, char* destPathName) {
     ppInfo ppiSrc;
     ppInfo ppiDest;
 
+    // Make a mutable copy of the pathname (discards const for warning issue)
     char* srcPath = strdup(srcPathName);
     if (srcPath == NULL) {
         return -1;
@@ -399,6 +401,7 @@ int fs_move(char *srcPathName, char* destPathName) {
         return -1;
     }
 
+    // Get PPI of both SRC and DEST paths
     if (parsePath(srcPath, &ppiSrc) == -1) {
         return -1;
     }
@@ -407,6 +410,7 @@ int fs_move(char *srcPathName, char* destPathName) {
         return -1;
     }
 
+    // Get a free entry in DEST directory
     int vacantDE = findUnusedDE(ppiDest.parent);
     if (vacantDE == -1) {
 		ppiDest.parent = expandDirectory(ppiDest.parent);
@@ -414,27 +418,32 @@ int fs_move(char *srcPathName, char* destPathName) {
 	}
     
 
+    // Store corresponding index to access PPI
     int srcElementIndex = ppiSrc.lastElementIndex;
     int destElementIndex = vacantDE;
 
+    // Copying SRC entry into DEST entry
     char name[sizeof(((DirectoryEntry*)0)->name)];
     memcpy(name, ppiDest.lastElement, sizeof(name));
     memcpy(&ppiDest.parent[vacantDE], &ppiSrc.parent[srcElementIndex], sizeof(DirectoryEntry));
     memcpy(&ppiDest.parent[vacantDE].name, name, sizeof(name));
 
+    // Deleting entry in SRC entry
     ppiSrc.parent[srcElementIndex].size = 0;
     ppiSrc.parent[srcElementIndex].location = -1;
 
     int sizeOfDestDirectory = (ppiDest.parent->size + vcb->blockSize - 1) / vcb->blockSize;
     int sizeOfSrcDirectory = (ppiSrc.parent->size + vcb->blockSize - 1) / vcb->blockSize;
 
-    if (ppiDest.parent->location == ppiSrc.parent->location) {
+    if (ppiDest.parent->location == ppiSrc.parent->location) { // When moving in the sam directory
+
+        // Set DEST directory of SRC file
         ppiDest.parent[srcElementIndex].size = 0;
         ppiDest.parent[srcElementIndex].location = -1;
         if (writeBlock(ppiDest.parent, sizeOfDestDirectory, ppiDest.parent->location) == -1) {
             return -1;
         }
-    } else {
+    } else { // Normal operation when moving in different directories
         if (writeBlock(ppiDest.parent, sizeOfDestDirectory, ppiDest.parent->location) == -1) {
             return -1;
         }
