@@ -25,7 +25,7 @@ int findNameInDir(DirectoryEntry* directory, char* name);
 int isDirEmpty(DirectoryEntry* directory);
 int parsePath(char* path, ppInfo* ppi);
 int deleteBlob(ppInfo ppi);
-int createFile(char *path, ppInfo* ppi);
-int updateWorkingDir(ppInfo ppi);
+int createFile(ppInfo* ppi);
+void updateWorkingDir(ppInfo ppi);
 
 #endif

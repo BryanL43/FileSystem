@@ -296,6 +296,12 @@ int parsePath(char* path, ppInfo* ppi) {
     return 0;
 }
 
+/**
+ * Updates the FAT to release the file location to the free space so it can be used by a different file
+ * 
+ * @param ppi the parse path information 
+ * @return 0 on success and -1 on failure.
+*/
 int deleteBlob(ppInfo ppi) {
     if (ppi.lastElementIndex == -1) {
         return -1;
@@ -326,13 +332,27 @@ int deleteBlob(ppInfo ppi) {
     return 0;
 }
 
-int createFile(char *path, ppInfo* ppi) {
+/**
+ * Creates a new file.
+ * 
+ * @param ppi parse pass info needed to create the new file
+ * 
+ * @return -1 on fail 0 on sucess
+*/
+int createFile(ppInfo* ppi) {
     time_t currentTime = time(NULL);
+
+    // find first available DE or make the directory bigger 
     int vacantDE = findUnusedDE(ppi->parent);
     if (vacantDE == -1) {
 		ppi->parent = expandDirectory(ppi->parent);
 		vacantDE = findUnusedDE(ppi->parent);
 	}
+    if (vacantDE < 0) {
+        return -1;
+    }
+
+    // init all of the metadata
     ppi->parent[vacantDE].dateCreated = currentTime;
     ppi->parent[vacantDE].dateModified = currentTime;
     ppi->parent[vacantDE].isDirectory = ' ';
@@ -341,17 +361,23 @@ int createFile(char *path, ppInfo* ppi) {
     ppi->parent[vacantDE].size = 0;
     ppi->lastElementIndex = vacantDE;
     
+    // save data to the disk
     int blocksToWrite = (ppi->parent->size + vcb->blockSize - 1) / vcb->blockSize;
     writeBlock(ppi->parent, blocksToWrite, ppi->parent->location);
 
     return 0;
 }
 
-int updateWorkingDir(ppInfo ppi) {
+/**
+ * ensure that the users memory is updated so all files on disk are represented 
+ * 
+ * @param ppi parse path info for the newly updated directory
+ */
+void updateWorkingDir(ppInfo ppi) {
     if (ppi.parent->location == root->location) {
         root = ppi.parent;
     }
-    else if (ppi.parent->location == cwd->location) {
+    if (ppi.parent->location == cwd->location) {
         cwd = ppi.parent;
     }
 }

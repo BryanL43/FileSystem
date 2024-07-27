@@ -79,7 +79,12 @@ DirectoryEntry *initDirectory(int minEntries, DirectoryEntry *parent)
     return DEs;
 }
 
-
+/**
+ * Makes room for mor directory entries in an exsisting a directory.
+ * 
+ * @param directory Pointer to the directory entry to be expanded.
+ * @return Pointer to the initialized directory entries or NULL if initialization failed.
+*/
 DirectoryEntry* expandDirectory(DirectoryEntry* directory) {
     int oldNumBlocks = (directory->size + vcb->blockSize - 1) / vcb->blockSize;
     int oldNumEntries = directory->size / sizeof(DirectoryEntry);
@@ -88,6 +93,7 @@ DirectoryEntry* expandDirectory(DirectoryEntry* directory) {
     int bytesToAlloc = numBlocks * vcb->blockSize;
     int actualEntries = bytesToAlloc / sizeof(DirectoryEntry);
 
+    // get enough memory to hold double the original size.
     DirectoryEntry *DEs = malloc(bytesToAlloc);
     if (DEs == NULL) {
         return NULL;
@@ -121,6 +127,12 @@ DirectoryEntry* expandDirectory(DirectoryEntry* directory) {
     return DEs;
 }  
 
+/**
+ * safley frees a directory entry to make sure that we dont free any of the globally 
+ * allocated directories.
+ * 
+ * @param dir Pointer to the directory entry to be freed.
+*/
 void freeDirectory(DirectoryEntry* dir) {
     if (dir->location != root->location && dir->location != cwd->location) {
         free(dir);

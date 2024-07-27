@@ -133,8 +133,12 @@ void exitFileSystem()
 	LBAwrite(vcb, 1, 0);
 	free(vcb);
 	free(FAT);
+
+	if(root->location != cwd->location) {
+		free(cwd);
+	}
+	
 	free(root);
-	free(cwd);
 	free(cwdPathName);
 	printf("System exiting\n");
 }
