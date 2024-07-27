@@ -138,17 +138,11 @@ int fs_stat(const char *path, struct fs_stat *buf) {
         return -1;
     }
 
-    int index = findNameInDir(ppi.parent, ppi.lastElement);
-    if (index == -1) {
-        return -1;
-    }
-
-    buf->st_size = ppi.parent[index].size;
+    buf->st_size = ppi.parent[ppi.lastElementIndex].size;
     buf->st_blksize = vcb->blockSize;
     buf->st_blocks = (ppi.parent->size + vcb->blockSize - 1) / vcb->blockSize;
     buf->st_createtime = ppi.parent->dateCreated;
     buf->st_modtime = ppi.parent->dateModified;
-
 
     freeDirectory(ppi.parent);
     return 0;
