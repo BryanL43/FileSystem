@@ -343,6 +343,8 @@ int createFile(char *path, ppInfo* ppi) {
     
     int blocksToWrite = (ppi->parent->size + vcb->blockSize - 1) / vcb->blockSize;
     writeBlock(ppi->parent, blocksToWrite, ppi->parent->location);
+
+    return 0;
 }
 
 int updateWorkingDir(ppInfo ppi) {

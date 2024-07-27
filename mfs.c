@@ -388,6 +388,7 @@ int fs_rmdir(const char *pathname) {
 }
 
 int fs_move(char *srcPathName, char* destPathName) {
+    time_t currentTime = time(NULL);
     ppInfo ppiSrc;
     ppInfo ppiDest;
 
@@ -427,6 +428,7 @@ int fs_move(char *srcPathName, char* destPathName) {
     memcpy(name, ppiDest.lastElement, sizeof(name));
     memcpy(&ppiDest.parent[vacantDE], &ppiSrc.parent[srcElementIndex], sizeof(DirectoryEntry));
     memcpy(&ppiDest.parent[vacantDE].name, name, sizeof(name));
+    ppiDest.parent[srcElementIndex].dateModified = currentTime;
 
     // Deleting entry in SRC entry
     ppiSrc.parent[srcElementIndex].size = 0;
