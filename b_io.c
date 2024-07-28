@@ -392,7 +392,8 @@ int b_read(b_io_fd fd, char *buffer, int count) {
 
     // Read part2 directly from the disk if needed
     if (part2 > 0) {
-        bytesRead = readBlock(buffer + part, numberOfBlocksToCopy, fcb->currentBlock + fcb->fi->location);
+		int loc = fcb->currentBlock + fcb->fi->location;
+        bytesRead = readBlock(buffer + part, numberOfBlocksToCopy, loc);
 
         // Ensure read was successful
         if (bytesRead < numberOfBlocksToCopy) {
@@ -433,7 +434,7 @@ int b_read(b_io_fd fd, char *buffer, int count) {
 
 
 /**
- * Coses a file descriptor, so that it no longer refers to
+ * Closes a file descriptor, so that it no longer refers to
  * any file and may be reused.
  * 
  * @param fd the file descriptor of the file being written.

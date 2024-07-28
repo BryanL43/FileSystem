@@ -136,7 +136,7 @@ int fs_mkdir(const char *pathname, mode_t mode) {
     
     memcpy(&(ppi.parent[vacantDE]), newDir, sizeof(DirectoryEntry));
     strncpy(ppi.parent[vacantDE].name, ppi.lastElement, sizeof(ppi.parent->name));
-
+    
     writeBlock(ppi.parent, (ppi.parent->size + vcb->blockSize - 1) / vcb->blockSize, ppi.parent->location);
 
     updateWorkingDir(ppi);
@@ -229,11 +229,10 @@ int fs_isFile(char* path) {
 }
 
 /**
- * check if the given path is a directory
+ * Check if the given path is a directory.
  * 
- * @param path the path of the directory in question
- * 
- * @return 1 if the direactory entry at the given path is a directory 0 otherwise
+ * @param path the path of the directory in question.
+ * @return 1 if the directory entry at the given path is a directory 0 otherwise.
  */
 fdDir * fs_opendir(const char *pathname){
 
@@ -289,11 +288,11 @@ int fs_closedir(fdDir *dirp)
 }
 
 /**
- * Get the information about a directory entry 
+ * Get the information about a directory entry.
  * 
- * @param dirp A sort of private file descriptor to keep track of what directory entries are in the current directory
- * 
- * @return fs_diriteminfo with metadata about each file in the directory
+ * @param dirp A sort of private file descriptor to keep track of what
+ *             directory entries are in the current directory.
+ * @return fs_diriteminfo with metadata about each file in the directory or NULL if error.
  */
 struct fs_diriteminfo *fs_readdir(fdDir *dirp)
 {
@@ -327,18 +326,19 @@ struct fs_diriteminfo *fs_readdir(fdDir *dirp)
     if (dirp->dirEntryPosition >= dirp->directory->size / sizeof(DirectoryEntry)) {
         return NULL;
     }
+
     return dirp->di;
 }
 
 /**
- * Delete the given file
+ * Delete the given file.
  * 
- * @param filename the path of the file to delete
- * @return 0 on success or -1 for error
+ * @param filename the path of the file to delete.
+ * @return 0 on success or -1 for error.
  */
 int fs_delete(char* filename) {
     ppInfo ppi;
-    // Make a mutable copy of the pathname (discards const for warning issue)
+    // Make a mutable copy of the pathname (discards const warning issue)
     char* path = strdup(filename);
     if (path == NULL) {
         return -1;
@@ -369,7 +369,6 @@ int fs_delete(char* filename) {
         return -1;
     }
 
-    // Freeing buffers
     freeDirectory(ppi.parent);
     free(path);
     return 0;
@@ -377,15 +376,15 @@ int fs_delete(char* filename) {
 
 
 /**
- * Delete the given directory
+ * Delete the given directory.
  * 
- * @param pathname the path of the directory to delete
- * @return 0 on success or -1 for error
+ * @param pathname the path of the directory to delete.
+ * @return 0 on success or -1 for error.
  */
 int fs_rmdir(const char *pathname) {
     ppInfo ppi;
 
-    // Make a mutable copy of the pathname (discards const for warning issue)
+    // Make a mutable copy of the pathname (discards const warning issue)
     char* path = strdup(pathname);
     if (path == NULL) {
         return -1;
@@ -447,25 +446,24 @@ int fs_rmdir(const char *pathname) {
         return -1;
     }
 
-    // Freeing buffers
     freeDirectory(ppi.parent);
     free(path);
     return 0;
 }
 
 /**
- * Move a file or directory from source directory to destination directory
+ * Move a file or directory from source directory to destination directory.
  * 
- * @param srcPathName the path of the source file/directory
- * @param destPathName the path of where to move the file/directory
- * @return 0 on success or -1 for error
+ * @param srcPathName the path of the source file/directory.
+ * @param destPathName the path of where to move the file/directory.
+ * @return 0 on success or -1 for error.
  */
 int fs_move(char *srcPathName, char* destPathName) {
     time_t currentTime = time(NULL);
     ppInfo ppiSrc;
     ppInfo ppiDest;
 
-    // Make a mutable copy of the pathname (discards const for warning issue)
+    // Make a mutable copy of the pathname (discards const warning issue)
     char* srcPath = strdup(srcPathName);
     if (srcPath == NULL) {
         return -1;
@@ -510,7 +508,8 @@ int fs_move(char *srcPathName, char* destPathName) {
     int sizeOfDestDirectory = (ppiDest.parent->size + vcb->blockSize - 1) / vcb->blockSize;
     int sizeOfSrcDirectory = (ppiSrc.parent->size + vcb->blockSize - 1) / vcb->blockSize;
 
-    if (ppiDest.parent->location == ppiSrc.parent->location) { // When moving in the sam directory
+    // When moving in the same directory
+    if (ppiDest.parent->location == ppiSrc.parent->location) {
 
         // Set DEST directory of SRC file
         ppiDest.parent[srcElementIndex].size = 0;
