@@ -141,6 +141,9 @@ b_io_fd b_open(char* filename, int flags) {
 	fcb.activeFlags = flags;
 	fcbArray[returnFd] = fcb;
 
+	updateWorkingDir(ppi);
+	freeDirectory(ppi.parent);
+
 	return (returnFd);
 }
 
@@ -248,7 +251,7 @@ int b_write (b_io_fd fd, char * buffer, int count) {
 
 	int parentSizeInBlocks = (fcb->parent->size + vcb->blockSize - 1) / vcb->blockSize;
     writeBlock(fcb->parent, parentSizeInBlocks, fcb->parent->location);
-    
+
     return count;
 }
 

@@ -80,9 +80,6 @@ int fs_mkdir(const char *pathname, mode_t mode) {
         free(mutablePath);
         return -1;
     }
-
-    DirectoryEntry* temp = loadDir(ppi.parent);
-    ppi.parent = temp;
     
     int vacantDE = findUnusedDE(ppi.parent);
     if (vacantDE == -1) {
@@ -166,6 +163,13 @@ int fs_isDir(char* path)
     return 0;
 }
 
+/**
+ * check if the given path is a file
+ * 
+ * @param path the path of the file in question
+ * 
+ * @return 1 if the direactory entry at the given path is a file 0 otherwise
+ */
 int fs_isFile(char* path) {
     ppInfo ppi;
 
@@ -183,6 +187,13 @@ int fs_isFile(char* path) {
     return 0;
 }
 
+/**
+ * check if the given path is a directory
+ * 
+ * @param path the path of the directory in question
+ * 
+ * @return 1 if the direactory entry at the given path is a directory 0 otherwise
+ */
 fdDir * fs_opendir(const char *pathname){
 
     ppInfo ppi;
@@ -236,6 +247,13 @@ int fs_closedir(fdDir *dirp)
     return 1;
 }
 
+/**
+ * Get the information about a directory entry 
+ * 
+ * @param dirp A sort of private file descriptor to keep track of what directory entries are in the current directory
+ * 
+ * @return fs_diriteminfo with metadata about each file in the directory
+ */
 struct fs_diriteminfo *fs_readdir(fdDir *dirp)
 {
     if (dirp == NULL) 
