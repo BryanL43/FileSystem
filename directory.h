@@ -21,7 +21,7 @@
 #include "freeSpace.h"
 
 // Default directory size is 64 directory entries
-#define DEFAULT_DIR_SIZE 19
+#define DEFAULT_DIR_SIZE 6
 
 typedef struct DirectoryEntry
 {
@@ -42,9 +42,6 @@ DirectoryEntry *initDirectory(int minEntries, DirectoryEntry *parent);
 DirectoryEntry* expandDirectory(DirectoryEntry* directory);
 
 void freeDirectory(DirectoryEntry* dir);
-
-void printDirFromMemory(DirectoryEntry* dir);
-void printDirFromDisk(DirectoryEntry* dir);
 
 extern DirectoryEntry* root;
 extern DirectoryEntry* cwd;

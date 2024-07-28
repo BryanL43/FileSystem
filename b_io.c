@@ -191,6 +191,7 @@ int b_write (b_io_fd fd, char * buffer, int count) {
 
 	int location = fcb->fi->location; //stores the location temporarily
 	int part1, part2, part3;
+	int bytesWritten = 0;
 
 	fcb->buflen = vcb->blockSize;
 
@@ -209,18 +210,22 @@ int b_write (b_io_fd fd, char * buffer, int count) {
 		fcb->parent[fcb->fileIndex].location = newFreeIndex;
 
 	// When the file already exist and needs to write more
-	} else if (fcb->fi->size + count > fcb->blockSize * vcb->blockSize) {
+	} 
+	if (fcb->fi->size + count > fcb->blockSize * vcb->blockSize) {
 		int bytesNeeded = count - (fcb->buflen - fcb->index);
 		int blocksNeeded = (bytesNeeded + vcb->blockSize - 1) / vcb->blockSize;
 
 		// Updating the FAT values to point old sentinel value to next index
-		FAT[fcb->currentBlock] = fcb->currentBlock + 1;
+		for (int i = 0; i < blocksNeeded; i ++) {
+			FAT[fcb->currentBlock + i] = fcb->currentBlock + i + 1;
+		}
+
 		if (getFreeBlocks(blocksNeeded, 0) == -1) {
 			return -1;
 		}
 		fcb->blockSize += blocksNeeded;
 	}
-
+	
 	// Writing in blocks at a time
 	if (count >= fcb->buflen) {
 		int blocksToWrite = count / vcb->blockSize;
@@ -230,12 +235,16 @@ int b_write (b_io_fd fd, char * buffer, int count) {
 		fcb->currentBlock += blocksToWrite;
 		fcb->blockSize += blocksToWrite;
 		buffer += blocksToWrite * vcb->blockSize;
+		count -= blocksToWrite * vcb->blockSize;
+		bytesWritten += blocksToWrite * vcb->blockSize;
 	}
 
 	// Our buffer is not completely filled
     if (fcb->index + count < fcb->buflen) {
 		memcpy(fcb->buf + fcb->index, buffer, count);
 		fcb->index += count;
+		bytesWritten += count;
+		count -= count;
 	} else { // Our buffer is full but there are more data to be filled
 		int remainingBytes = fcb->buflen - fcb->index;
 
@@ -248,11 +257,15 @@ int b_write (b_io_fd fd, char * buffer, int count) {
 		}
 
 		buffer += remainingBytes;
+		bytesWritten += remainingBytes;
 		fcb->currentBlock++;
+		count -= remainingBytes;
 
 		// Copy the remaining bytes into our buffer
-		memcpy(fcb->buf, buffer, count - remainingBytes);
-		fcb->index = count - remainingBytes;
+		memcpy(fcb->buf, buffer, count);
+		fcb->index = count;
+		bytesWritten += count;
+		count -= count;
 	}
 
 	// Truncate our buffer to remove trash bytes before writing
@@ -263,8 +276,7 @@ int b_write (b_io_fd fd, char * buffer, int count) {
 	}
 	free(temp);
 
-
-    fcb->fi->size += count;
+    fcb->fi->size += bytesWritten;
 
     // Update Directory Entry in parent
     fcbArray[fd] = *fcb;
@@ -276,7 +288,7 @@ int b_write (b_io_fd fd, char * buffer, int count) {
 		return -1;
 	}
 
-    return count;
+    return bytesWritten;
 }
 
 
