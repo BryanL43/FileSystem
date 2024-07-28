@@ -289,6 +289,12 @@ struct fs_diriteminfo *fs_readdir(fdDir *dirp)
     return dirp->di;
 }
 
+/**
+ * Delete the given file
+ * 
+ * @param filename the path of the file to delete
+ * @return 0 on success or -1 for error
+ */
 int fs_delete(char* filename) {
     ppInfo ppi;
     // Make a mutable copy of the pathname (discards const for warning issue)
@@ -328,6 +334,13 @@ int fs_delete(char* filename) {
     return 0;
 }
 
+
+/**
+ * Delete the given directory
+ * 
+ * @param pathname the path of the directory to delete
+ * @return 0 on success or -1 for error
+ */
 int fs_rmdir(const char *pathname) {
     ppInfo ppi;
 
@@ -399,6 +412,13 @@ int fs_rmdir(const char *pathname) {
     return 0;
 }
 
+/**
+ * Move a file or directory from source directory to destination directory
+ * 
+ * @param srcPathName the path of the source file/directory
+ * @param destPathName the path of where to move the file/directory
+ * @return 0 on success or -1 for error
+ */
 int fs_move(char *srcPathName, char* destPathName) {
     time_t currentTime = time(NULL);
     ppInfo ppiSrc;

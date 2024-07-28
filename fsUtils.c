@@ -363,7 +363,9 @@ int createFile(ppInfo* ppi) {
     
     // save data to the disk
     int blocksToWrite = (ppi->parent->size + vcb->blockSize - 1) / vcb->blockSize;
-    writeBlock(ppi->parent, blocksToWrite, ppi->parent->location);
+    if (writeBlock(ppi->parent, blocksToWrite, ppi->parent->location) == -1) {
+        return -1;
+    }
 
     return 0;
 }

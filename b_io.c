@@ -97,7 +97,9 @@ b_io_fd b_open(char* filename, int flags) {
 
 	// Create a file if it doesn't exist
 	if (ppi.lastElementIndex == -1 && flags & O_CREAT) {
-		createFile(&ppi);
+		if (createFile(&ppi) == -1) {
+			return -1;
+		}
 		fcb.fileIndex = ppi.lastElementIndex;
 	}
 
@@ -115,7 +117,9 @@ b_io_fd b_open(char* filename, int flags) {
 		// Initialize variable information needed for b_read/b_write
 		fcb.index = fcb.buflen = fcb.currentBlock = fcb.blockSize = 0;
 
-		deleteBlob(ppi);
+		if (deleteBlob(ppi) == -1) {
+			return -1;
+		}
 	}
 
 	fcb.fi = &ppi.parent[ppi.lastElementIndex]; //assign temp file to fcb.fi
@@ -161,8 +165,14 @@ int b_seek (b_io_fd fd, off_t offset, int whence) {
 }
 
 
-
-// Interface to write function    
+/**
+ * Write to a file using the provided buffer
+ * 
+ * @param fd the file descriptor of the file being written
+ * @param buffer the buffer to write into the file
+ * @param count how many bytes to write from the buffer
+ * @return how many bytes was written into the file
+ */   
 int b_write (b_io_fd fd, char * buffer, int count) {
 	time_t currentTime = time(NULL);
     if (startup == 0) b_init();  //Initialize our system
@@ -188,6 +198,9 @@ int b_write (b_io_fd fd, char * buffer, int count) {
     // Grow file size if necessary
 	if (location == -2) { // When the file doesn't take up space in disk
 		int newFreeIndex = getFreeBlocks(1, 0);
+		if (newFreeIndex == -1) {
+			return -1;
+		}
 		fcb->blockSize++;
 
 		// Set index to start writing based on free space
@@ -202,16 +215,21 @@ int b_write (b_io_fd fd, char * buffer, int count) {
 
 		// Updating the FAT values to point old sentinel value to next index
 		FAT[fcb->currentBlock] = fcb->currentBlock + 1;
-		getFreeBlocks(blocksNeeded, 0);
+		if (getFreeBlocks(blocksNeeded, 0) == -1) {
+			return -1;
+		}
 		fcb->blockSize += blocksNeeded;
 	}
 
 	// Writing in blocks at a time
 	if (count >= fcb->buflen) {
 		int blocksToWrite = count / vcb->blockSize;
-		writeBlock(buffer, blocksToWrite, fcb->currentBlock);
+		if (writeBlock(buffer, blocksToWrite, fcb->currentBlock) == -1) {
+			return -1;
+		}
 		fcb->currentBlock += blocksToWrite;
 		fcb->blockSize += blocksToWrite;
+		buffer += blocksToWrite * vcb->blockSize;
 	}
 
 	// Our buffer is not completely filled
@@ -225,7 +243,9 @@ int b_write (b_io_fd fd, char * buffer, int count) {
 		memcpy(fcb->buf + fcb->index, buffer, remainingBytes);
 
 		// Commit the full buffer
-		writeBlock(fcb->buf, 1, fcb->currentBlock);
+		if (writeBlock(fcb->buf, 1, fcb->currentBlock) == -1) {
+			return -1;
+		}
 
 		buffer += remainingBytes;
 		fcb->currentBlock++;
@@ -238,7 +258,9 @@ int b_write (b_io_fd fd, char * buffer, int count) {
 	// Truncate our buffer to remove trash bytes before writing
 	char *temp = calloc(1, vcb->blockSize);
 	memcpy(temp, fcb->buf, fcb->index);
-	writeBlock(temp, 1, fcb->currentBlock);
+	if (writeBlock(temp, 1, fcb->currentBlock) == -1) {
+		return -1;
+	}
 	free(temp);
 
 
@@ -250,7 +272,9 @@ int b_write (b_io_fd fd, char * buffer, int count) {
 	fcb->parent[fcb->fileIndex].dateModified = currentTime;
 
 	int parentSizeInBlocks = (fcb->parent->size + vcb->blockSize - 1) / vcb->blockSize;
-    writeBlock(fcb->parent, parentSizeInBlocks, fcb->parent->location);
+    if (writeBlock(fcb->parent, parentSizeInBlocks, fcb->parent->location) == -1) {
+		return -1;
+	}
 
     return count;
 }
@@ -393,8 +417,6 @@ int b_close (b_io_fd fd) {
 	fcbArray[fd].currentBlock = 0;
 	fcbArray[fd].index = 0;
 	fcbArray[fd].fi = NULL;
-	// free(fcbArray[fd].parent);
-	// free(fcbArray[fd].buf);
 	fcbArray[fd].buf = NULL;
 
 	return 0;
