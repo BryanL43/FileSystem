@@ -454,14 +454,22 @@ int fs_rmdir(const char *pathname) {
     int sizeOfDir = (ppi.parent[index].size + vcb->blockSize - 1) / vcb->blockSize;
     if (index < 0 || locationOfDir < 0 || sizeOfDir < 0) {
         free(path);
+        freeDirectory(ppi.parent);
         return -1;
     }
 
     // Load directory for empty check
     DirectoryEntry* directoryToDelete = loadDir(&(ppi.parent[ppi.lastElementIndex]));
+    if (directoryToDelete == NULL) {
+        free(path);
+        freeDirectory(ppi.parent);
+    }
+
     if(isDirEmpty(directoryToDelete) == -1) {
         // When the directory is not empty, return error
         free(path);
+        free(directoryToDelete);
+        freeDirectory(ppi.parent);
         return -1;
     }
 
@@ -475,6 +483,8 @@ int fs_rmdir(const char *pathname) {
         int endOfDirIndex = seekBlock(sizeOfDir - 1, locationOfDir);
         if (endOfDirIndex < 0) {
             free(path);
+            free(directoryToDelete);
+            freeDirectory(ppi.parent);
             return -1;
         }
         // Clearing the sentinel value
@@ -485,6 +495,8 @@ int fs_rmdir(const char *pathname) {
     // Write updated FAT to disk
     if (writeBlock(FAT, vcb->freeSpaceSize, vcb->freeSpaceLocation) == -1) {
         free(path);
+        free(directoryToDelete);
+        freeDirectory(ppi.parent);
         return -1;
     }
 
@@ -495,11 +507,15 @@ int fs_rmdir(const char *pathname) {
     int sizeOfDirectory = (ppi.parent[0].size + vcb->blockSize - 1) / vcb->blockSize;
     if (writeBlock(ppi.parent, sizeOfDirectory, ppi.parent[0].location) == -1) {
         free(path);
+        free(directoryToDelete);
+        freeDirectory(ppi.parent);
         return -1;
     }
 
+    free(directoryToDelete);
     freeDirectory(ppi.parent);
     free(path);
+
     return 0;
 }
 
@@ -522,15 +538,21 @@ int fs_move(char *srcPathName, char* destPathName) {
     }
     char* destPath = strdup(destPathName);
     if (destPath == NULL) {
+        free(srcPath);
         return -1;
     }
 
     // Get PPI of both SRC and DEST paths
     if (parsePath(srcPath, &ppiSrc) == -1) {
+        free(srcPath);
+        free(destPath);
         return -1;
     }
 
     if (parsePath(destPath, &ppiDest) == -1) {
+        free(srcPath);
+        free(destPath);
+        freeDirectory(ppiSrc.parent);
         return -1;
     }
 
@@ -538,9 +560,14 @@ int fs_move(char *srcPathName, char* destPathName) {
     int vacantDE = findUnusedDE(ppiDest.parent);
     if (vacantDE == -1) {
 		ppiDest.parent = expandDirectory(ppiDest.parent);
+        if (ppiDest.parent == NULL) {
+            free(srcPath);
+            free(destPath);
+            freeDirectory(ppiSrc.parent);
+            return -1;
+        }
 		vacantDE = findUnusedDE(ppiDest.parent);
 	}
-    
 
     // Store corresponding index to access PPI
     int srcElementIndex = ppiSrc.lastElementIndex;
@@ -567,19 +594,36 @@ int fs_move(char *srcPathName, char* destPathName) {
         ppiDest.parent[srcElementIndex].size = 0;
         ppiDest.parent[srcElementIndex].location = -1;
         if (writeBlock(ppiDest.parent, sizeOfDestDirectory, ppiDest.parent->location) == -1) {
+            free(srcPath);
+            free(destPath);
+            freeDirectory(ppiSrc.parent);
+            freeDirectory(ppiDest.parent);
             return -1;
         }
     } else { // Normal operation when moving in different directories
         if (writeBlock(ppiDest.parent, sizeOfDestDirectory, ppiDest.parent->location) == -1) {
+            free(srcPath);
+            free(destPath);
+            freeDirectory(ppiSrc.parent);
+            freeDirectory(ppiDest.parent);
             return -1;
         }
 
         if (writeBlock(ppiSrc.parent, sizeOfSrcDirectory, ppiSrc.parent->location) == -1) {
+            free(srcPath);
+            free(destPath);
+            freeDirectory(ppiSrc.parent);
+            freeDirectory(ppiDest.parent);
             return -1;
         }
     }   
     updateWorkingDir(ppiDest);
     updateWorkingDir(ppiSrc);
+
+    free(srcPath);
+    free(destPath);
+    freeDirectory(ppiSrc.parent);
+    freeDirectory(ppiDest.parent);
 
     return 0;
 }
