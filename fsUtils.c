@@ -392,7 +392,7 @@ void updateWorkingDir(ppInfo ppi) {
     if (ppi.parent->location == root->location) {
         root = ppi.parent;
     }
-    if (ppi.parent->location == cwd->location) {
+    else if (ppi.parent->location == cwd->location) {
         cwd = ppi.parent;
     }
 }
