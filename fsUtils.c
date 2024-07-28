@@ -8,26 +8,28 @@
 *
 * File:: fsUtils.h
 *
-* Description:: Important utility/helper functions for directory operations.
+* Description:: Important utility/helper functions for the file system.
 *
 **************************************************************/
 
 #include "fsUtils.h"
 
 /**
- * Sanitize path for pwd.
+ * Sanitize path for pwd and primarily removes redundancy.
  * 
  * @param pathname the path name.
  * @return the sanitized absolute path or NULL on failure.
 */
 char* normalizePath(const char* pathname) {
     int capacity = 10;
+
+    // Instantiate the path vector that holds the seperated path components
     char** pathArray = malloc(sizeof(char*) * capacity);
     if (pathArray == NULL) {
         return NULL;
     }
 
-    // Make a mutable copy of the pathname (discards const for warning issue)
+    // Makes a mutable copy of the pathname (discards const warning issue)
     char* mutablePath = strdup(pathname);
     if (mutablePath == NULL) {
         free(pathArray);
@@ -38,12 +40,15 @@ char* normalizePath(const char* pathname) {
     char* token = strtok_r(mutablePath, "/", &saveptr);
     int size = 0;
 
+    // Iterates through the tokenized path and stores the seperated path's directory
+    // components into the path vector.
     while (token != NULL) {
         // Expand pathArray if it gets full
         if (size >= capacity) {
             capacity *= 2;
+            // Double the size of the path vector
             char** temp = realloc(pathArray, sizeof(char*) * capacity);
-            if (temp == NULL) { // clear pathArray on realloc failure
+            if (temp == NULL) {
                 for (int i = 0; i < size; i++) {
                     free(pathArray[i]);
                 }
@@ -56,7 +61,7 @@ char* normalizePath(const char* pathname) {
 
         // Parse each individual component of path
         pathArray[size] = strdup(token);
-        if (pathArray[size] == NULL) { // Handle memory allocation failure
+        if (pathArray[size] == NULL) {
             for (int i = 0; i < size; i++) {
                 free(pathArray[i]);
             }
@@ -69,8 +74,9 @@ char* normalizePath(const char* pathname) {
         token = strtok_r(NULL, "/", &saveptr);
     }
 
+    // Instantiate an array to hold the indices we want to keep from the path vector
     int* indexToKeep = malloc(sizeof(int) * size);
-    if (indexToKeep == NULL) { // Handle memory allocation failure
+    if (indexToKeep == NULL) {
         for (int i = 0; i < size; i++) {
             free(pathArray[i]);
         }
@@ -79,16 +85,17 @@ char* normalizePath(const char* pathname) {
         return NULL;
     }
 
-    // Determine which index of path arguments we should keep
+    // Iterate through the path vector and determine which index of
+    // path arguments we should keep
     int index = 0;
     for (int i = 0; i < size; i++) {
         if (strcmp(pathArray[i], ".") == 0) {
             // Do nothing for current directory
-        } else if (strcmp(pathArray[i], "..") == 0) {
+        } else if (strcmp(pathArray[i], "..") == 0) { // Traverse up the path once if ".."
             if (index > 0) {
                 index--;
             }
-        } else {
+        } else { // Stay in current location if "."
             indexToKeep[index++] = i;
         }
     }
@@ -99,8 +106,9 @@ char* normalizePath(const char* pathname) {
         returnLength += strlen(pathArray[indexToKeep[i]]) + 1;
     }
 
+    // Instantiate the string we want to return (the cleaned path)
     char* returnString = malloc(returnLength);
-    if (returnString == NULL) { // Handle memory allocation failure
+    if (returnString == NULL) {
         for (int i = 0; i < size; i++) {
             free(pathArray[i]);
         }
@@ -136,7 +144,7 @@ char* normalizePath(const char* pathname) {
 }
 
 /**
- * Load a directory
+ * Loads a directory into memory
  * 
  * @param directory the parent directory to be loaded.
  * @return the loaded directory which **needs to be freed** or NULL if failed.
@@ -164,10 +172,6 @@ DirectoryEntry* loadDir(DirectoryEntry* directory) {
  * @return the index on success or -1 if not found.
 */
 int findUnusedDE(DirectoryEntry* directory) {
-    if (directory == NULL) {
-        return -2;
-    }
-    
     for (int i = 0; i < directory->size / sizeof(DirectoryEntry); i++) {
         if (directory[i].location == -1) {
             return i;
@@ -204,7 +208,7 @@ int findNameInDir(DirectoryEntry* directory, char* name) {
  * Checks if the directory is empty or not.
  * 
  * @param directory the directory that is being checked.
- * @return -1 if not empty, 1 if empty.
+ * @return -1 if not empty, 0 if empty.
 */
 int isDirEmpty(DirectoryEntry *directory) {
     for (int i = 2; i < directory->size / sizeof(DirectoryEntry); i++) {
@@ -228,13 +232,15 @@ int parsePath(char* path, ppInfo* ppi) {
         return -1;
     }
 
-    // Make a mutable copy of the pathname (discards const for warning issue)
+    // Make a mutable copy of the pathname (discards const warning issue)
     // Strict enforcement for strtok_r to not alter path
     char* mutablePath = strdup(path);
     if (mutablePath == NULL) {
         return -1;
     }
 
+    // Determine whether the path is absolute or relative and
+    // assign the appropriate directory to the parent directory
     DirectoryEntry* parent;
     if (path[0] == '/') {
         parent = root;
@@ -242,6 +248,7 @@ int parsePath(char* path, ppInfo* ppi) {
         parent = cwd;
     }
 
+    // Loads the current directory into memory
     DirectoryEntry* currentDir = loadDir(parent);
     if (currentDir == NULL) {
         free(mutablePath);
@@ -250,7 +257,7 @@ int parsePath(char* path, ppInfo* ppi) {
 
     char* saveptr;
     char* token1 = strtok_r(mutablePath, "/", &saveptr);
-    if (token1 == NULL) { // Special case "/"
+    if (token1 == NULL) { // Special case "/" only
         ppi->parent = parent;
         ppi->lastElement = NULL;
         ppi->lastElementIndex = -2; // special sentinel
@@ -259,29 +266,34 @@ int parsePath(char* path, ppInfo* ppi) {
         return 0;
     }
 
+    // Iterates through the path until it reaches the end or any error occurs
     char* token2;
     do {
         ppi->lastElement = token1;
         ppi->lastElementIndex = findNameInDir(currentDir, token1);
-
+        
+        // Checks if we are at the end of the path
         token2 = strtok_r(NULL, "/", &saveptr);
         if (token2 == NULL) {
             ppi->parent = currentDir;
             return 0;
         }
 
-        if (ppi->lastElementIndex < 0) { // Name doesn't exist (Invalid path)
+        // Name doesn't exist (Invalid path)
+        if (ppi->lastElementIndex < 0) {
             free(mutablePath);
             freeDirectory(currentDir);
             return -1;
         }
 
+        // Check if entry is a directory or not
         if (currentDir[ppi->lastElementIndex].isDirectory != 'd') {
             free(mutablePath);
             freeDirectory(currentDir);
             return -1;
         }
 
+        // Loads the subdirectory into memory
         DirectoryEntry* temp = loadDir(&(currentDir[ppi->lastElementIndex]));
         if (temp == NULL) {
             free(mutablePath);
@@ -289,6 +301,8 @@ int parsePath(char* path, ppInfo* ppi) {
             return -1;
         }
         freeDirectory(currentDir);
+
+        // Set the current directory to the subdirectory
         currentDir = temp;
         token1 = token2;
     } while (token2 != NULL);
@@ -297,7 +311,7 @@ int parsePath(char* path, ppInfo* ppi) {
 }
 
 /**
- * Updates the FAT to release the file location to the free space so it can be used by a different file
+ * Updates the FAT to release the file location and reassign it as free for future use.
  * 
  * @param ppi the parse path information 
  * @return 0 on success and -1 on failure.
@@ -333,16 +347,15 @@ int deleteBlob(ppInfo ppi) {
 }
 
 /**
- * Creates a new file.
+ * Creates a new file entry.
  * 
  * @param ppi parse pass info needed to create the new file
- * 
- * @return -1 on fail 0 on sucess
+ * @return 0 on success or -1 on failure
 */
 int createFile(ppInfo* ppi) {
     time_t currentTime = time(NULL);
 
-    // find first available DE or make the directory bigger 
+    // Find first available directory entry or expand if all space is occupied
     int vacantDE = findUnusedDE(ppi->parent);
     if (vacantDE == -1) {
 		ppi->parent = expandDirectory(ppi->parent);
@@ -352,7 +365,7 @@ int createFile(ppInfo* ppi) {
         return -1;
     }
 
-    // init all of the metadata
+    // Initialize all the metadata
     ppi->parent[vacantDE].dateCreated = currentTime;
     ppi->parent[vacantDE].dateModified = currentTime;
     ppi->parent[vacantDE].isDirectory = ' ';
@@ -361,7 +374,7 @@ int createFile(ppInfo* ppi) {
     ppi->parent[vacantDE].size = 0;
     ppi->lastElementIndex = vacantDE;
     
-    // save data to the disk
+    // Write data to the disk
     int blocksToWrite = (ppi->parent->size + vcb->blockSize - 1) / vcb->blockSize;
     if (writeBlock(ppi->parent, blocksToWrite, ppi->parent->location) == -1) {
         return -1;
@@ -371,10 +384,10 @@ int createFile(ppInfo* ppi) {
 }
 
 /**
- * ensure that the users memory is updated so all files on disk are represented 
+ * Ensure that the user's memory is updated so all files on disk are represented.
  * 
  * @param ppi parse path info for the newly updated directory
- */
+*/
 void updateWorkingDir(ppInfo ppi) {
     if (ppi.parent->location == root->location) {
         root = ppi.parent;

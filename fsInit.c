@@ -60,7 +60,7 @@ int initFileSystem(uint64_t numberOfBlocks, uint64_t blockSize)
 	}
 
 	// Instantiate current working directory path name
-	cwdPathName = malloc(blockSize); //Size up for debate
+	cwdPathName = malloc(blockSize);
 	if (cwdPathName == NULL) {
 		free(vcb);
 		free(FAT);
@@ -79,17 +79,19 @@ int initFileSystem(uint64_t numberOfBlocks, uint64_t blockSize)
 		if (root == NULL) {
 			free(vcb);
 			free(FAT);
+			free(cwdPathName);
 			return -1;
 		}
 
 		if (LBAread(root, 1, vcb->rootLocation) < 0) {
 			free(vcb);
 			free(FAT);
+			free(cwdPathName);
 			free(root);
 			return -1;
 		}
-		root = loadDir(root); // MEMORY LEAK
-	} else { //Case: File system is not yet initialized
+		root = loadDir(root);
+	} else { // Case: File system is not yet initialized
 		vcb->signature = SIGNATURE;
 		vcb->blockSize = blockSize;
 		vcb->totalBlocks = numberOfBlocks;
@@ -98,6 +100,7 @@ int initFileSystem(uint64_t numberOfBlocks, uint64_t blockSize)
 		if (initFreeSpace(numberOfBlocks, blockSize) != 0) {
 			free(vcb);
 			free(FAT);
+			free(cwdPathName);
 			return -1;
 		}
 
@@ -106,6 +109,7 @@ int initFileSystem(uint64_t numberOfBlocks, uint64_t blockSize)
 		if (root == NULL) {
 			free(vcb);
 			free(FAT);
+			free(cwdPathName);
 			return -1;
 		}
 
@@ -116,18 +120,27 @@ int initFileSystem(uint64_t numberOfBlocks, uint64_t blockSize)
 		if (LBAwrite(vcb, 1, 0) == -1) {
 			free(vcb);
 			free(FAT);
+			free(cwdPathName);
 			free(root);
 			return -1;
 		}
 	}
 	
-	//Set current working directory as root
-	fs_setcwd("/");
+	// Set current working directory as root
+	if (fs_setcwd("/") == -1) {
+		free(vcb);
+		free(FAT);
+		free(cwdPathName);
+		free(root);
+		return -1;
+	}
+
 	strcpy(cwdPathName, "/");
 
 	return 0;
 }
 
+// Exits the file system and release resources
 void exitFileSystem()
 {
 	LBAwrite(vcb, 1, 0);

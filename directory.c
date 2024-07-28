@@ -8,7 +8,8 @@
 *
 * File:: directory.c
 *
-* Description:: Robust directory creation method
+* Description:: Robust directory creation method and its
+* associated helper functions
 *
 **************************************************************/
 
@@ -37,6 +38,7 @@ DirectoryEntry *initDirectory(int minEntries, DirectoryEntry *parent)
     }
 
     time_t currentTime = time(NULL);
+
     // Initialize each directory entry to a known free state
     for(int i = 2; i < actualEntries; i++) {
         DEs[i].dateCreated = currentTime;
@@ -73,6 +75,7 @@ DirectoryEntry *initDirectory(int minEntries, DirectoryEntry *parent)
 
     // Write the directory blocks to volume
     if (writeBlock(DEs, blocksNeeded, newLoc) == -1) {
+        free(DEs);
         return NULL;
     }
 
@@ -80,10 +83,10 @@ DirectoryEntry *initDirectory(int minEntries, DirectoryEntry *parent)
 }
 
 /**
- * Makes room for mor directory entries in an exsisting a directory.
+ * Expands an existing directory to create room for more directory entries.
  * 
  * @param directory Pointer to the directory entry to be expanded.
- * @return Pointer to the initialized directory entries or NULL if initialization failed.
+ * @return Pointer to the initialized directory entries or NULL if the expansion failed.
 */
 DirectoryEntry* expandDirectory(DirectoryEntry* directory) {
     int oldNumBlocks = (directory->size + vcb->blockSize - 1) / vcb->blockSize;
@@ -93,7 +96,7 @@ DirectoryEntry* expandDirectory(DirectoryEntry* directory) {
     int bytesToAlloc = numBlocks * vcb->blockSize;
     int actualEntries = bytesToAlloc / sizeof(DirectoryEntry);
 
-    // get enough memory to hold double the original size.
+    // Retrieve enough memory to hold double the original directory size
     DirectoryEntry *DEs = malloc(bytesToAlloc);
     if (DEs == NULL) {
         return NULL;
@@ -116,11 +119,13 @@ DirectoryEntry* expandDirectory(DirectoryEntry* directory) {
     // Request free space for the expanded directory
     int newLoc = getFreeBlocks(oldNumBlocks, seekBlock(oldNumBlocks -1, DEs[0].location));
     if (newLoc == -1) {
+        free(DEs);
         return NULL;
     }
 
     // Write the directory blocks to volume
     if (writeBlock(DEs, numBlocks, DEs[0].location) == -1) {
+        free(DEs);
         return NULL;
     }
 
@@ -128,7 +133,7 @@ DirectoryEntry* expandDirectory(DirectoryEntry* directory) {
 }  
 
 /**
- * safley frees a directory entry to make sure that we dont free any of the globally 
+ * Safely frees a directory entry to ensure that we don't free any of the globally 
  * allocated directories.
  * 
  * @param dir Pointer to the directory entry to be freed.
