@@ -380,7 +380,7 @@ int fs_rmdir(const char *pathname) {
         vcb->firstFreeBlock = locationOfDir;
     } else  if (sizeOfDir > 1) {
         // Traverse the FAT until it reaches the sentinel value
-        int endOfDirIndex = seekBlock(sizeOfDir, locationOfDir);
+        int endOfDirIndex = seekBlock(sizeOfDir - 1, locationOfDir);
         if (endOfDirIndex < 0) {
             free(path);
             return -1;

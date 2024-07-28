@@ -316,7 +316,7 @@ int deleteBlob(ppInfo ppi) {
         vcb->firstFreeBlock = locationOfFile;
     } else if (sizeOfFile > 1) {
         // Traverse the FAT until it reaches the sentinel value
-        int endOfFileIndex = seekBlock(sizeOfFile/vcb->blockSize, locationOfFile);
+        int endOfFileIndex = seekBlock(sizeOfFile - 1, locationOfFile);
         if (endOfFileIndex < 0) {
             return -1;
         }
