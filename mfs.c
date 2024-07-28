@@ -94,7 +94,14 @@ char* fs_getcwd(char *pathname, size_t size) {
     strncpy(pathname, cwdPathName, size);
     return cwdPathName;
 }
-
+/**
+ *  fs_mkdir()  Create the DIRECTORY(ies), 
+ *  if they do not already exist
+ * 
+ * @param path the path of the file in question
+ * @param mod file bit mask(not in use)
+ * @return 0 on success. On error, -1 is returned.
+ */
 int fs_mkdir(const char *pathname, mode_t mode) {
     ppInfo ppi;
 
@@ -148,11 +155,11 @@ int fs_mkdir(const char *pathname, mode_t mode) {
     return 0;
 }
 /**
- *  fs_stat() attempts assign buffe's variable size, blocksize,
- *  blocks, creatime, and modtime 
+ *  fs_stat() return information about a file, in the buffer
+ *   pointed to by statbuf.
  * 
  * @param path the path of the file in question
- * @param buf 
+ * @param buf file information buffer
  * @return 0 on success. On error, -1 is returned.
  */
 int fs_stat(const char *path, struct fs_stat *buf) {
