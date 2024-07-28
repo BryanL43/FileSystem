@@ -242,7 +242,7 @@ int fs_isFile(char* path) {
  * @return 1 if the directory entry at the given path is a directory 0 otherwise.
  */
 fdDir * fs_opendir(const char *pathname){
-
+    //traverse path
     ppInfo ppi;
     char* path = strdup(pathname);
     if (path == NULL) {
@@ -254,17 +254,17 @@ fdDir * fs_opendir(const char *pathname){
         return NULL;
     }
 
-    fdDir *dirp = malloc(sizeof(dirp));
-    if (dirp == NULL) {
-        freeDirectory(ppi.parent);
-        return NULL;
-    }
 
     if (ppi.lastElementIndex == ROOT)
     {
         ppi.lastElementIndex = 0;
     }
-    
+    //Populate the instantiation of fdDir struct
+    fdDir *dirp = malloc(sizeof(dirp));
+    if (dirp == NULL) {
+        freeDirectory(ppi.parent);
+        return NULL;
+    }
     DirectoryEntry * thisDir = loadDir(&(ppi.parent[ppi.lastElementIndex]));
     dirp->directory = thisDir;
     dirp->dirEntryPosition = 0;
