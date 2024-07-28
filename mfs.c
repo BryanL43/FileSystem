@@ -90,37 +90,48 @@ int fs_setcwd(char *pathname) {
     return 0;
 }
 
+/**
+ * Gets the current working directory.
+ * 
+ * @param pathname the specified path.
+ * @param size the byte size of the path.
+ * @return cwdPathName the current working directory path name.
+*/
 char* fs_getcwd(char *pathname, size_t size) {
     strncpy(pathname, cwdPathName, size);
     return cwdPathName;
 }
+
 /**
- *  fs_mkdir()  Create the DIRECTORY(ies), 
- *  if they do not already exist
+ * Creates a directory.
  * 
- * @param path the path of the file in question
- * @param mod file bit mask(not in use)
+ * @param path the specified path.
+ * @param mode file bit mask (not in use).
  * @return 0 on success. On error, -1 is returned.
  */
 int fs_mkdir(const char *pathname, mode_t mode) {
     ppInfo ppi;
 
-    //tranversing path
-    // Make a mutable copy of the pathname (discards const for warning issue)
+    // Make a mutable copy of the pathname (discards const warning issue)
     char* mutablePath = strdup(pathname);
     if (mutablePath == NULL) {
         return -1;
     }
 
-    if (parsePath(mutablePath, &ppi) == -1) { // Error case
+    // Parse the path
+    if (parsePath(mutablePath, &ppi) == -1) {
         free(mutablePath);
         return -1;
     }
     
-    //find unused directory entry
+    // Find unused directory entry
     int vacantDE = findUnusedDE(ppi.parent);
     if (vacantDE == -1) {
         ppi.parent = expandDirectory(ppi.parent);
+        if (ppi.parent == NULL) {
+            free(mutablePath);
+            return -1;
+        }
         vacantDE = findUnusedDE(ppi.parent);
     }
 
@@ -136,7 +147,7 @@ int fs_mkdir(const char *pathname, mode_t mode) {
         return -2;
     }
     
-    //instantiate an Directory instance
+    // Instantiate an directory instance
     DirectoryEntry* newDir = initDirectory(DEFAULT_DIR_SIZE, ppi.parent);
     if (newDir == NULL) {
         free(mutablePath);
@@ -144,11 +155,11 @@ int fs_mkdir(const char *pathname, mode_t mode) {
         return -1;
     }
     
-    //copies the new instantiated Directory to destination of the traverse path
+    // Copies the new instantiated directory to its specified destination
     memcpy(&(ppi.parent[vacantDE]), newDir, sizeof(DirectoryEntry));
     strncpy(ppi.parent[vacantDE].name, ppi.lastElement, sizeof(ppi.parent->name));
     
-    //updates the information across the system
+    // Write the new directory to disk
     writeBlock(ppi.parent, (ppi.parent->size + vcb->blockSize - 1) / vcb->blockSize, ppi.parent->location);
 
     updateWorkingDir(ppi);
@@ -159,29 +170,31 @@ int fs_mkdir(const char *pathname, mode_t mode) {
 
     return 0;
 }
+
 /**
- *  fs_stat() return information about a file, in the buffer
- *   pointed to by statbuf.
+ * Returns information about a entry, in the fs_stat buffer.
  * 
- * @param path the path of the file in question
- * @param buf file information buffer
+ * @param path the specified path.
+ * @param buf file information buffer.
  * @return 0 on success. On error, -1 is returned.
  */
 int fs_stat(const char *path, struct fs_stat *buf) {
     ppInfo ppi;
 
-    // Make a mutable copy of the pathname (discards const for warning issue)
+    // Make a mutable copy of the pathname (discards const warning issue)
     char* mutablePath = strdup(path);
     if (mutablePath == NULL) {
         return -1;
     }
     
+    // Parse the path
     int ret = parsePath(mutablePath, &ppi);
     free(mutablePath);
     if (ret == -1) {
         return -1;
     }
 
+    // Populate the fs_stat buffer
     buf->st_size = ppi.parent[ppi.lastElementIndex].size;
     buf->st_blksize = vcb->blockSize;
     buf->st_blocks = (ppi.parent->size + vcb->blockSize - 1) / vcb->blockSize;
@@ -191,11 +204,11 @@ int fs_stat(const char *path, struct fs_stat *buf) {
     freeDirectory(ppi.parent);
     return 0;
 }
+
 /**
- * check if the given path is a directory
+ * Checks if the given path is a directory.
  * 
- * @param path the path of the file in question
- * 
+ * @param path the specified path.
  * @return 1 if Directory. On error or not Directory, 0 is returned. 
  */
 int fs_isDir(char* path) 
@@ -217,11 +230,10 @@ int fs_isDir(char* path)
 }
 
 /**
- * check if the given path is a file
+ * Checks if the given path is a file.
  * 
- * @param path the path of the file in question
- * 
- * @return 1 if the direactory entry at the given path is a file 0 otherwise
+ * @param path the specified path.
+ * @return 1 if the directory entry at the given path is a file, 0 otherwise.
  */
 int fs_isFile(char* path) {
     ppInfo ppi;
