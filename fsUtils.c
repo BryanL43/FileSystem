@@ -359,6 +359,9 @@ int createFile(ppInfo* ppi) {
     int vacantDE = findUnusedDE(ppi->parent);
     if (vacantDE == -1) {
 		ppi->parent = expandDirectory(ppi->parent);
+        if (ppi.parent == NULL) {
+            return -1;
+        }
 		vacantDE = findUnusedDE(ppi->parent);
 	}
     if (vacantDE < 0) {
