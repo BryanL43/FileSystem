@@ -147,7 +147,14 @@ int fs_mkdir(const char *pathname, mode_t mode) {
 
     return 0;
 }
-
+/**
+ *  fs_stat() attempts assign buffe's variable size, blocksize,
+ *  blocks, creatime, and modtime 
+ * 
+ * @param path the path of the file in question
+ * @param buf 
+ * @return 0 on success. On error, -1 is returned.
+ */
 int fs_stat(const char *path, struct fs_stat *buf) {
     ppInfo ppi;
 
@@ -172,7 +179,13 @@ int fs_stat(const char *path, struct fs_stat *buf) {
     freeDirectory(ppi.parent);
     return 0;
 }
-
+/**
+ * check if the given path is a directory
+ * 
+ * @param path the path of the file in question
+ * 
+ * @return 1 if Directory. On error or not Directory, 0 is returned. 
+ */
 int fs_isDir(char* path) 
 {
     ppInfo ppi;
