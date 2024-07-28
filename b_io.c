@@ -76,27 +76,27 @@ b_io_fd b_getFCB() {
 // Interface to open a buffered file
 // Modification of interface for this assignment, flags match the Linux flags for open
 // O_RDONLY, O_WRONLY, or O_RDWR
+
 /**
- *  The b_open() call opens the file specified by pathname.  If
- *  the specified file does not exist, it may optionally (if O_CREAT
- *  is specified in flags) be created by open().
+ * The function opens the file specified by pathname. If
+ * the specified file does not exist, it may optionally (if O_CREAT
+ * is specified in flags) be created by b_open.
  * 
  * @param filename path of the filename
- * @param flags O_CREAT, O_TRUNC, O_APPEND, O_RDONLY, O_WRONLY, or O_RDWR
- * @return file descriptor
+ * @param flags O_CREAT, O_TRUNC, O_APPEND, O_RDONLY, O_WRONLY, or O_RDWR.
+ * @return the file descriptor.
  */ 
 b_io_fd b_open(char* filename, int flags) {
-	if (startup == 0) b_init();  //Initialize our system
+	if (startup == 0) b_init();  // Initialize our system
 
 	b_io_fd returnFd;
 	ppInfo ppi;
 	
-	returnFd = b_getFCB(); // get free file descriptor
-	if (returnFd == -1) { // check for error - all used FCB's
+	returnFd = b_getFCB(); // Get free file descriptor
+	if (returnFd == -1) {
 		return returnFd;
 	}
 
-	// Setting our fcb to what is stored in fcb array
 	b_fcb fcb = fcbArray[returnFd];
 
 	// Filling out ppi
@@ -117,13 +117,11 @@ b_io_fd b_open(char* filename, int flags) {
 		return -1;
 	}
 
-	// Truncate a file (requires write access)
+	// Truncate a file (requires write access) and deletes the file's content
 	if (ppi.lastElementIndex > 0 && (flags & O_TRUNC) && (flags & O_WRONLY)) {
-		// Populate the file information
 		ppi.parent[ppi.lastElementIndex].location = -2;
 		ppi.parent[ppi.lastElementIndex].size = 0;
 
-		// Initialize variable information needed for b_read/b_write
 		fcb.index = fcb.buflen = fcb.currentBlock = fcb.blockSize = 0;
 
 		if (deleteBlob(ppi) == -1) {
@@ -131,7 +129,7 @@ b_io_fd b_open(char* filename, int flags) {
 		}
 	}
 
-	fcb.fi = &ppi.parent[ppi.lastElementIndex]; //assign temp file to fcb.fi
+	fcb.fi = &ppi.parent[ppi.lastElementIndex]; // assign temp file to fcb.fi
 	// Instantiate file control block buffer
 	fcb.buf = malloc(vcb->blockSize);
 	if (fcb.buf == NULL) {
@@ -150,7 +148,7 @@ b_io_fd b_open(char* filename, int flags) {
 	fcb.blockSize = (fcb.blockSize > 0) ? fcb.blockSize : 0;
 	fcb.fileIndex = (fcb.fileIndex == 0) ? ppi.lastElementIndex : fcb.fileIndex;
 
-	fcb.parent = ppi.parent; //allow access to write
+	fcb.parent = ppi.parent; //allow parent access to b_write
 	fcb.activeFlags = flags;
 	fcbArray[returnFd] = fcb;
 
@@ -175,12 +173,12 @@ int b_seek (b_io_fd fd, off_t offset, int whence) {
 
 
 /**
- * Write to a file using the provided buffer
+ * Write to a file using the provided buffer.
  * 
- * @param fd the file descriptor of the file being written
- * @param buffer the buffer to write into the file
- * @param count how many bytes to write from the buffer
- * @return how many bytes was written into the file
+ * @param fd the file descriptor of the file being written.
+ * @param buffer the buffer to write into the file.
+ * @param count how many bytes to write from the buffer.
+ * @return how many bytes was written into the file.
  */   
 int b_write (b_io_fd fd, char * buffer, int count) {
 	time_t currentTime = time(NULL);
@@ -217,9 +215,9 @@ int b_write (b_io_fd fd, char * buffer, int count) {
 		fcb->currentBlock = newFreeIndex;
 		fcb->fi->location = newFreeIndex;
 		fcb->parent[fcb->fileIndex].location = newFreeIndex;
+	} 
 
 	// When the file already exist and needs to write more
-	} 
 	if (fcb->fi->size + count > fcb->blockSize * vcb->blockSize) {
 		int bytesNeeded = count - (fcb->buflen - fcb->index);
 		int blocksNeeded = (bytesNeeded + vcb->blockSize - 1) / vcb->blockSize;
@@ -248,7 +246,7 @@ int b_write (b_io_fd fd, char * buffer, int count) {
 		bytesWritten += blocksToWrite * vcb->blockSize;
 	}
 
-	// Our buffer is not completely filled
+	// Our buffer is not yet completely filled
     if (fcb->index + count < fcb->buflen) {
 		memcpy(fcb->buf + fcb->index, buffer, count);
 		fcb->index += count;
@@ -292,6 +290,7 @@ int b_write (b_io_fd fd, char * buffer, int count) {
 	fcb->parent[fcb->fileIndex].size = fcb->fi->size;
 	fcb->parent[fcb->fileIndex].dateModified = currentTime;
 
+	// Write the parent to disk
 	int parentSizeInBlocks = (fcb->parent->size + vcb->blockSize - 1) / vcb->blockSize;
     if (writeBlock(fcb->parent, parentSizeInBlocks, fcb->parent->location) == -1) {
 		return -1;
@@ -321,9 +320,10 @@ int b_write (b_io_fd fd, char * buffer, int count) {
 //  |             |                                                |        |
 //  | Part1       |  Part 2                                        | Part3  |
 //  +-------------+------------------------------------------------+--------+
+
 /**
- *   b_read() attempts to read up to count bytes from file descriptor fd
- *   into the buffer
+ * b_read() attempts to read up to count bytes from file descriptor fd
+ * into the buffer
  * 
  * @param fd the file descriptor of the file being written
  * @param buffer the buffer to write into the file
@@ -331,20 +331,18 @@ int b_write (b_io_fd fd, char * buffer, int count) {
  * @return how many bytes was read into the file
  */ 
 int b_read(b_io_fd fd, char *buffer, int count) {
-    int bytesRead = 0;       // Bytes read in each operation
-    int bytesReturned = 0;   // Total bytes returned
-    int part = 0, part2 = 0, part3 = 0;  // Parts to read
-    int numberOfBlocksToCopy = 0;  // Blocks to read
-    int remainingBytesInMyBuffer = 0;  // Remaining bytes in buffer
+    int bytesRead = 0;
+    int bytesReturned = 0;
+    int part = 0, part2 = 0, part3 = 0;
+    int numberOfBlocksToCopy = 0;
+    int remainingBytesInMyBuffer = 0;
     
     if (startup == 0) b_init(); // Initialize system if needed
 
-    // Validate file descriptor
     if ((fd < 0) || (fd >= MAXFCBS)) {
         return -1; // Invalid file descriptor
     }
 
-    // Check if file is open
     if (fcbArray[fd].fi == NULL) { 
         return -1; // File not open for this descriptor
     }
@@ -354,13 +352,10 @@ int b_read(b_io_fd fd, char *buffer, int count) {
         return -1;
     }
 
-    // Use a pointer to modify the global fcb
     b_fcb *fcb = &fcbArray[fd];  
 
-    // Calculate remaining bytes in buffer
     remainingBytesInMyBuffer = fcb->buflen - fcb->index;
 
-    // Calculate amount already delivered to ensure count doesn't exceed file size
     int amountAlreadyDelivered = (fcb->currentBlock * B_CHUNK_SIZE) - remainingBytesInMyBuffer;
     
     // Adjust count to ensure we don't read beyond the file size
@@ -432,18 +427,16 @@ int b_read(b_io_fd fd, char *buffer, int count) {
         }
     }
 
-    // Return total bytes read
     return bytesReturned;
 }
 
 
 
-// Interface to Close the file
 /**
- *   b_close() closes a file descriptor, so that it no longer refers to
-*    any file and may be reused.
+ * Coses a file descriptor, so that it no longer refers to
+ * any file and may be reused.
  * 
- * @param fd the file descriptor of the file being written
+ * @param fd the file descriptor of the file being written.
  * @return 0 on success. On error, -1 is returned. 
  */ 
 int b_close (b_io_fd fd) {

@@ -1,3 +1,18 @@
+/**************************************************************
+* Class::  CSC-415-01 Summer 2024
+* Name:: Kevin Lam, Bryan Lee, Matt Stoffel, Bryan Yao
+* Student IDs:: 922350179, 922649673, 923127111, 922709642
+* GitHub-Name:: MattRStoffel
+* Group-Name:: Robert Bierman
+* Project:: Basic File System
+*
+* File:: mfs.c
+*
+* Description:: File system directory operation methods that handles the following
+* shell commands: ls, mv, md, rm, cd, and pwd.
+*
+**************************************************************/
+
 #include "mfs.h"
 #include "fsDesign.h"
 #include "directory.h"
@@ -5,12 +20,19 @@
 
 #define ROOT -2
 
+/**
+ * Sets the current working directory to the specified directory.
+ * 
+ * @param pathname the specified path.
+ * @return 0 on success or -1 on failure.
+*/
 int fs_setcwd(char *pathname) {
     ppInfo ppi;
 
+    // Parse path to acquire information about the directory
     int ret = parsePath(pathname, &ppi);
     if (ret == -1 || ppi.lastElementIndex == -1 || ppi.parent[ppi.lastElementIndex].isDirectory == ' ') {
-        return -1; // parsePath returned error
+        return -1;
     }
 
     if (ppi.lastElementIndex == -2) { // Special "root" case
@@ -22,12 +44,12 @@ int fs_setcwd(char *pathname) {
         return 0;
     }
 
+    // Loads the directory into memory
     DirectoryEntry* temp = loadDir(&(ppi.parent[ppi.lastElementIndex]));
     if (temp == NULL) {
         return -1;
     }
     memcpy(cwd, temp, temp->size);
-    // freeDirectory(ppi.parent)
     
     // Determine the new path name
     char* newPath;
@@ -56,7 +78,13 @@ int fs_setcwd(char *pathname) {
     cwdPathName = normalizePath(newPath);
     free(newPath);
 
-    writeBlock(cwd, (cwd->size + vcb->blockSize - 1) / vcb->blockSize, cwd->location);
+    // Write the current working directory to disk
+    int numOfBlocks = (cwd->size + vcb->blockSize - 1) / vcb->blockSize;
+    if (writeBlock(cwd, numOfBlocks, cwd->location) == -1) {
+        freeDirectory(temp);
+        return -1;
+    }
+
     freeDirectory(temp);
 
     return 0;

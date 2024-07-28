@@ -313,7 +313,7 @@ int parsePath(char* path, ppInfo* ppi) {
 /**
  * Updates the FAT to release the file location and reassign it as free for future use.
  * 
- * @param ppi the parse path information 
+ * @param ppi the parse path information.
  * @return 0 on success and -1 on failure.
 */
 int deleteBlob(ppInfo ppi) {
@@ -349,8 +349,8 @@ int deleteBlob(ppInfo ppi) {
 /**
  * Creates a new file entry.
  * 
- * @param ppi parse pass info needed to create the new file
- * @return 0 on success or -1 on failure
+ * @param ppi parse pass info needed to create the new file.
+ * @return 0 on success or -1 on failure.
 */
 int createFile(ppInfo* ppi) {
     time_t currentTime = time(NULL);
@@ -386,7 +386,7 @@ int createFile(ppInfo* ppi) {
 /**
  * Ensure that the user's memory is updated so all files on disk are represented.
  * 
- * @param ppi parse path info for the newly updated directory
+ * @param ppi parse path info for the newly updated directory.
 */
 void updateWorkingDir(ppInfo ppi) {
     if (ppi.parent->location == root->location) {
