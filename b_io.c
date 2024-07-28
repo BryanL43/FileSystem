@@ -33,7 +33,7 @@ typedef struct b_fcb {
 	DirectoryEntry* fi; //holds the file information
 	DirectoryEntry* parent;
 
-	/** TODO add al the information you need in the file control block **/
+	/** TODO add all the information you need in the file control block **/
 	char* buf;			//holds the open file buffer
 	int index;			//holds the current position in the buffer
 	int buflen;			//holds how many valid bytes are in the buffer
@@ -76,13 +76,22 @@ b_io_fd b_getFCB() {
 // Interface to open a buffered file
 // Modification of interface for this assignment, flags match the Linux flags for open
 // O_RDONLY, O_WRONLY, or O_RDWR
+/**
+ *  The b_open() call opens the file specified by pathname.  If
+ *  the specified file does not exist, it may optionally (if O_CREAT
+ *  is specified in flags) be created by open().
+ * 
+ * @param filename path of the filename
+ * @param flags O_CREAT, O_TRUNC, O_APPEND, O_RDONLY, O_WRONLY, or O_RDWR
+ * @return file descriptor
+ */ 
 b_io_fd b_open(char* filename, int flags) {
 	if (startup == 0) b_init();  //Initialize our system
 
 	b_io_fd returnFd;
 	ppInfo ppi;
 	
-	returnFd = b_getFCB(); // get our own file descriptor
+	returnFd = b_getFCB(); // get free file descriptor
 	if (returnFd == -1) { // check for error - all used FCB's
 		return returnFd;
 	}
@@ -312,6 +321,15 @@ int b_write (b_io_fd fd, char * buffer, int count) {
 //  |             |                                                |        |
 //  | Part1       |  Part 2                                        | Part3  |
 //  +-------------+------------------------------------------------+--------+
+/**
+ *   b_read() attempts to read up to count bytes from file descriptor fd
+ *   into the buffer
+ * 
+ * @param fd the file descriptor of the file being written
+ * @param buffer the buffer to write into the file
+ * @param count number of bytes to read
+ * @return how many bytes was read into the file
+ */ 
 int b_read(b_io_fd fd, char *buffer, int count) {
     int bytesRead = 0;       // Bytes read in each operation
     int bytesReturned = 0;   // Total bytes returned
@@ -420,7 +438,14 @@ int b_read(b_io_fd fd, char *buffer, int count) {
 
 
 
-// Interface to Close the file	
+// Interface to Close the file
+/**
+ *   b_close() closes a file descriptor, so that it no longer refers to
+*    any file and may be reused.
+ * 
+ * @param fd the file descriptor of the file being written
+ * @return 0 on success. On error, -1 is returned. 
+ */ 
 int b_close (b_io_fd fd) {
 	if (fd < 0 || fd >= MAXFCBS || fcbArray[fd].fi == NULL) {
 		return -1;
