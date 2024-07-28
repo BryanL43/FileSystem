@@ -253,54 +253,81 @@ int fs_isFile(char* path) {
 }
 
 /**
- * Check if the given path is a directory.
+ * Open the directory and populates fdDir structure 
+ * for the uses of fs_readdir.
  * 
  * @param path the path of the directory in question.
- * @return 1 if the directory entry at the given path is a directory 0 otherwise.
+ * @return fdDir structure
  */
-fdDir * fs_opendir(const char *pathname){
-    //traverse path
+fdDir * fs_opendir(const char *pathname) {
     ppInfo ppi;
+
+    // Make a mutable copy of the pathname (discards const warning issue)
     char* path = strdup(pathname);
     if (path == NULL) {
         return NULL;
     }
 
+    // Traverse the path
     if (parsePath(path, &ppi) != 0) {
+        free(path);
         freeDirectory(ppi.parent);
         return NULL;
     }
 
 
-    if (ppi.lastElementIndex == ROOT)
-    {
+    if (ppi.lastElementIndex == ROOT) {
         ppi.lastElementIndex = 0;
     }
-    //Populate the instantiation of fdDir struct
+
+    // Instantiate the fdDir structure
     fdDir *dirp = malloc(sizeof(dirp));
     if (dirp == NULL) {
+        free(path);
         freeDirectory(ppi.parent);
         return NULL;
     }
+
+    // Load the directory to be opened into memory
     DirectoryEntry * thisDir = loadDir(&(ppi.parent[ppi.lastElementIndex]));
+    if (thisDir == NULL) {
+        free(path);
+        free(dirp);
+        freeDirectory(ppi.parent);
+        return NULL;
+    }
+    
+    // Populate the dirp structure
     dirp->directory = thisDir;
     dirp->dirEntryPosition = 0;
     dirp->d_reclen = 0;
-    for(int i = 0; i < thisDir->size / sizeof(DirectoryEntry); i++)
-        if(dirp->directory[i].location != -1)
+    for(int i = 0; i < thisDir->size / sizeof(DirectoryEntry); i++) {
+        if(dirp->directory[i].location != -1) {
             dirp->d_reclen++;
+        }
+    }
+    
     struct fs_diriteminfo * di = malloc(sizeof(di));
     if (di == NULL) {
+        free(path);
+        free(dirp);
+        freeDirectory(ppi.parent);
         return NULL;
     }
 
-    freeDirectory(ppi.parent);
-
     dirp->di = di;
-    return dirp;
+    freeDirectory(ppi.parent);
+    free(path);
 
+    return dirp;
 }
 
+/**
+ * Closes a directory.
+ * 
+ * @param dirp the directory's descriptor.
+ * @return 1 on success.
+*/
 int fs_closedir(fdDir *dirp)
 {
     freeDirectory(dirp->directory);
@@ -362,11 +389,13 @@ struct fs_diriteminfo *fs_readdir(fdDir *dirp)
  */
 int fs_delete(char* filename) {
     ppInfo ppi;
-    // Make a mutable copy of the pathname (discards const warning issue)
+
+    // Make a mutable copy of the filename (discards const warning issue)
     char* path = strdup(filename);
     if (path == NULL) {
         return -1;
     }
+
     // Populate ppInfo
     if (parsePath(path, &ppi) == -1) {
         free(path);
@@ -374,8 +403,7 @@ int fs_delete(char* filename) {
     }
 
     // Deleting the file without touching directory
-    if(deleteBlob(ppi) == -1)
-    {
+    if(deleteBlob(ppi) == -1) {
         free(path);
         return -1;
     }
