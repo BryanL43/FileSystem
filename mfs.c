@@ -105,6 +105,7 @@ char* fs_getcwd(char *pathname, size_t size) {
 int fs_mkdir(const char *pathname, mode_t mode) {
     ppInfo ppi;
 
+    //tranversing path
     // Make a mutable copy of the pathname (discards const for warning issue)
     char* mutablePath = strdup(pathname);
     if (mutablePath == NULL) {
@@ -116,6 +117,7 @@ int fs_mkdir(const char *pathname, mode_t mode) {
         return -1;
     }
     
+    //find unused directory entry
     int vacantDE = findUnusedDE(ppi.parent);
     if (vacantDE == -1) {
         ppi.parent = expandDirectory(ppi.parent);
@@ -133,7 +135,8 @@ int fs_mkdir(const char *pathname, mode_t mode) {
         freeDirectory(ppi.parent);
         return -2;
     }
-
+    
+    //instantiate an Directory instance
     DirectoryEntry* newDir = initDirectory(DEFAULT_DIR_SIZE, ppi.parent);
     if (newDir == NULL) {
         free(mutablePath);
@@ -141,9 +144,11 @@ int fs_mkdir(const char *pathname, mode_t mode) {
         return -1;
     }
     
+    //copies the new instantiated Directory to destination of the traverse path
     memcpy(&(ppi.parent[vacantDE]), newDir, sizeof(DirectoryEntry));
     strncpy(ppi.parent[vacantDE].name, ppi.lastElement, sizeof(ppi.parent->name));
     
+    //updates the information across the system
     writeBlock(ppi.parent, (ppi.parent->size + vcb->blockSize - 1) / vcb->blockSize, ppi.parent->location);
 
     updateWorkingDir(ppi);
