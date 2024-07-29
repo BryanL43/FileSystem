@@ -294,7 +294,6 @@ int b_write (b_io_fd fd, char * buffer, int count) {
 	// Write the parent to disk
 	int parentSizeInBlocks = (fcb->parent->size + vcb->blockSize - 1) / vcb->blockSize;
 	
-	printf("fcb.parent.location: %d\n", fcb->parent->location);
     if (writeBlock(fcb->parent, parentSizeInBlocks, fcb->parent->location) == -1) {
 		return -1;
 	}
