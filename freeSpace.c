@@ -120,6 +120,14 @@ int writeBlock(void* buffer, uint64_t numberOfBlocks, int location) {
     return blocksWritten;
 }
 
+/**
+ * Loads the specified blocks into memory.
+ * 
+ * @param buffer the buffer to load the data into.
+ * @param numberOfBlocks the specified number of blocks.
+ * @param location the starting block to load from.
+ * @return blocks read or -1 on failure.
+*/
 int readBlock(void* buffer, uint64_t numberOfBlocks, int location) {
     int blockSize = vcb->blockSize;
     int blocksRead = 0;
@@ -134,6 +142,13 @@ int readBlock(void* buffer, uint64_t numberOfBlocks, int location) {
     return blocksRead;
 }
 
+/**
+ * Seeks the location of the specified block.
+ * 
+ * @param numberOfBlocks the specified number of blocks.
+ * @param location the starting block to search from.
+ * @return the location of the found block or -1 on failure.
+*/
 int seekBlock(uint64_t numberOfBlocks, int location) {
     if (location < 0) {
         return -1;
