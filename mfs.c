@@ -375,7 +375,7 @@ struct fs_diriteminfo *fs_readdir(fdDir *dirp)
 
 
     // Past the end of the number of directories
-    if (dirp->dirEntryPosition >= dirp->directory->size / sizeof(DirectoryEntry)) {
+    if (dirp->dirEntryPosition > dirp->directory->size / sizeof(DirectoryEntry)) {
         return NULL;
     }
 
