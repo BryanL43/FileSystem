@@ -123,8 +123,10 @@ int fs_mkdir(const char *pathname, mode_t mode) {
         free(mutablePath);
         return -1;
     }
-    DirectoryEntry* test = loadDir(ppi.parent);
-    ppi.parent = test;
+
+    DirectoryEntry* temp = loadDir(ppi.parent);
+    ppi.parent = temp;
+
     // Find unused directory entry
     int vacantDE = findUnusedDE(ppi.parent);
     if (vacantDE == -1) {
@@ -276,6 +278,8 @@ fdDir * fs_opendir(const char *pathname) {
         return NULL;
     }
 
+    DirectoryEntry* temp = loadDir(ppi.parent);
+    ppi.parent = temp;
 
     if (ppi.lastElementIndex == ROOT) {
         ppi.lastElementIndex = 0;
@@ -358,6 +362,9 @@ struct fs_diriteminfo *fs_readdir(fdDir *dirp)
 
     unsigned short pos = dirp->dirEntryPosition;
 
+    DirectoryEntry* temp = loadDir(dirp->directory);
+    dirp->directory = temp;
+
     // Find the next valid directory entry
     while (dirp->directory[pos].location < 0 && dirp->directory[pos].location != -2) {
         pos++;
@@ -375,7 +382,7 @@ struct fs_diriteminfo *fs_readdir(fdDir *dirp)
 
 
     // Past the end of the number of directories
-    if (dirp->dirEntryPosition > dirp->directory->size / sizeof(DirectoryEntry)) {
+    if (dirp->dirEntryPosition >= dirp->directory->size / sizeof(DirectoryEntry)) {
         return NULL;
     }
 
