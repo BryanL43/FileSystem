@@ -392,10 +392,10 @@ int createFile(ppInfo* ppi) {
  * @param ppi parse path info for the newly updated directory.
 */
 void updateWorkingDir(ppInfo ppi) {
-    if (ppi.parent->location == root->location) {
-        root = ppi.parent;
-    }
-    else if (ppi.parent->location == cwd->location) {
+    if (ppi.parent->location == cwd->location) {
         cwd = ppi.parent;
+    }
+    else if (ppi.parent->location == root->location) {
+        root = ppi.parent;
     }
 }
