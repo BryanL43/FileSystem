@@ -219,7 +219,12 @@ int b_write (b_io_fd fd, char * buffer, int count) {
 
 	// When the file already exist and needs to write more
 	if (fcb->fi->size + count > fcb->blockSize * vcb->blockSize) {
-		int bytesNeeded = count - (fcb->buflen - fcb->index);
+		int bytesNeeded = 0;
+		if (fcb->index == 0) {
+			bytesNeeded = count;
+		} else {
+			bytesNeeded = count - (fcb->buflen - fcb->index);
+		}
 		int blocksNeeded = (bytesNeeded + vcb->blockSize - 1) / vcb->blockSize;
 
 		// Updating the FAT values to point old sentinel value to next index
@@ -293,7 +298,7 @@ int b_write (b_io_fd fd, char * buffer, int count) {
 	
 	// Write the parent to disk
 	int parentSizeInBlocks = (fcb->parent->size + vcb->blockSize - 1) / vcb->blockSize;
-	
+
     if (writeBlock(fcb->parent, parentSizeInBlocks, fcb->parent->location) == -1) {
 		return -1;
 	}
