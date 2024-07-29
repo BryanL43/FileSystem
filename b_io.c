@@ -290,8 +290,12 @@ int b_write (b_io_fd fd, char * buffer, int count) {
 	fcb->parent[fcb->fileIndex].size = fcb->fi->size;
 	fcb->parent[fcb->fileIndex].dateModified = currentTime;
 
+	
 	// Write the parent to disk
 	int parentSizeInBlocks = (fcb->parent->size + vcb->blockSize - 1) / vcb->blockSize;
+	if (fcb->parent->location + parentSizeInBlocks >= vcb->totalBlocks) {
+        return -1; // Prevent writing beyond disk capacity
+    }
     if (writeBlock(fcb->parent, parentSizeInBlocks, fcb->parent->location) == -1) {
 		return -1;
 	}
