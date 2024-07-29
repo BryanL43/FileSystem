@@ -6,7 +6,7 @@
 * Group-Name:: Robert Bierman
 * Project:: Basic File System
 *
-* File:: fsUtils.h
+* File:: fsUtils.c
 *
 * Description:: Important utility/helper functions for the file system.
 *
