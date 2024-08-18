@@ -34,6 +34,7 @@ typedef struct VCB
 
 typedef struct ppInfo {
    struct DirectoryEntry* parent;
+   struct DirectoryEntry* previousDir;
    char* lastElement;
    int lastElementIndex;
 } ppInfo;

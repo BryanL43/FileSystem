@@ -130,9 +130,14 @@ int fs_mkdir(const char *pathname, mode_t mode) {
     // Find unused directory entry
     int vacantDE = findUnusedDE(ppi.parent);
     if (vacantDE == -1) {
-        ppi.parent = expandDirectory(ppi.parent);
+        // Acquire parent directory
+        char* result = secondToLastElement(pathname);
+        int location = findNameInDir(ppi.previousDir, result);
+        
+        ppi.parent = expandDirectory(ppi.parent, ppi.previousDir, &ppi.previousDir[location]);
         if (ppi.parent == NULL) {
             free(mutablePath);
+            freeDirectory(temp);
             return -1;
         }
         vacantDE = findUnusedDE(ppi.parent);
@@ -142,7 +147,7 @@ int fs_mkdir(const char *pathname, mode_t mode) {
         free(mutablePath);
         freeDirectory(ppi.parent);
         return -1;
-    }  
+    }
 
     if (ppi.lastElementIndex != -1) { // directory already exists
         free(mutablePath);
@@ -163,7 +168,12 @@ int fs_mkdir(const char *pathname, mode_t mode) {
     strncpy(ppi.parent[vacantDE].name, ppi.lastElement, sizeof(ppi.parent->name));
     
     // Write the new directory to disk
-    writeBlock(ppi.parent, (ppi.parent->size + vcb->blockSize - 1) / vcb->blockSize, ppi.parent->location);
+    int parentNumOfBlocks = (ppi.parent->size + vcb->blockSize - 1) / vcb->blockSize;
+    if (writeBlock(ppi.parent, parentNumOfBlocks, ppi.parent->location) == -1) {
+        free(mutablePath);
+        free(newDir);
+        freeDirectory(ppi.parent);
+    }
 
     updateWorkingDir(ppi);
 
@@ -278,51 +288,35 @@ fdDir * fs_opendir(const char *pathname) {
         return NULL;
     }
 
-    DirectoryEntry* temp = loadDir(ppi.parent);
-    ppi.parent = temp;
+    DirectoryEntry entry = ppi.parent[ppi.lastElementIndex];
+    printf("Entry.size: %d\n", ppi.parent[ppi.lastElementIndex].size);
 
-    if (ppi.lastElementIndex == ROOT) {
-        ppi.lastElementIndex = 0;
-    }
-
-    // Instantiate the fdDir structure
-    fdDir *dirp = malloc(sizeof(dirp));
+    fdDir* dirp = malloc(sizeof(fdDir));
     if (dirp == NULL) {
         free(path);
         freeDirectory(ppi.parent);
         return NULL;
     }
 
-    // Load the directory to be opened into memory
-    DirectoryEntry * thisDir = loadDir(&(ppi.parent[ppi.lastElementIndex]));
-    if (thisDir == NULL) {
-        free(path);
-        free(dirp);
-        freeDirectory(ppi.parent);
-        return NULL;
-    }
-    
-    // Populate the dirp structure
-    dirp->directory = thisDir;
-    dirp->dirEntryPosition = 0;
-    dirp->d_reclen = 0;
-    for(int i = 0; i < thisDir->size / sizeof(DirectoryEntry); i++) {
-        if(dirp->directory[i].location != -1) {
-            dirp->d_reclen++;
-        }
-    }
-    
-    struct fs_diriteminfo * di = malloc(sizeof(di));
-    if (di == NULL) {
+    dirp->d_reclen = (entry.size + vcb->blockSize - 1) / vcb->blockSize;
+    dirp->dirEntryPosition = ppi.lastElementIndex;
+    dirp->dirEntryLocation = entry.location;
+    dirp->index = 0;
+
+    dirp->di = malloc(sizeof(struct fs_diriteminfo));
+    if (dirp->di == NULL) {
         free(path);
         free(dirp);
         freeDirectory(ppi.parent);
         return NULL;
     }
 
-    dirp->di = di;
-    freeDirectory(ppi.parent);
+    dirp->di->d_reclen = (entry.size + vcb->blockSize - 1) / vcb->blockSize;
+    dirp->di->fileType = entry.isDirectory;
+    strcpy(dirp->di->d_name, ppi.lastElement);
+    
     free(path);
+    freeDirectory(ppi.parent);
 
     return dirp;
 }
@@ -350,41 +344,18 @@ int fs_closedir(fdDir *dirp)
  *             directory entries are in the current directory.
  * @return fs_diriteminfo with metadata about each file in the directory or NULL if error.
  */
-struct fs_diriteminfo *fs_readdir(fdDir *dirp)
-{
-    if (dirp == NULL) 
-        return NULL;
+struct fs_diriteminfo *fs_readdir(fdDir *dirp) {
+    printf("Number od entries: %d\n", dirp->d_reclen);
+    // DirectoryEntry* entries = malloc(dirp->d_reclen * vcb->blockSize);
 
-    // Past the end of the number of directories
-    if (dirp->dirEntryPosition >= dirp->directory->size / sizeof(DirectoryEntry)) {
-        return NULL;
-    }
+    // if (readBlock(entries, dirp->d_reclen, dirp->dirEntryLocation) == -1) {
+    //     free(entries);
+    //     return NULL;
+    // }
 
-    unsigned short pos = dirp->dirEntryPosition;
+    //unsigned short pos = dirp->dirEntryPosition;
 
-    DirectoryEntry* temp = loadDir(dirp->directory);
-    dirp->directory = temp;
-
-    // Find the next valid directory entry
-    while (dirp->directory[pos].location < 0 && dirp->directory[pos].location != -2) {
-        pos++;
-    }
-
-    // Populate the fs_diriteminfo structure
-    dirp->di->d_reclen = (dirp->directory[pos].size + sizeof(DirectoryEntry) - 1) 
-                        / sizeof(DirectoryEntry);
-    
-    dirp->di->fileType = dirp->directory[pos].isDirectory;
-    strcpy(dirp->di->d_name, dirp->directory[pos].name);
-
-    // Move to the next directory entry
-    dirp->dirEntryPosition = 1 + pos;
-
-
-    // Past the end of the number of directories
-    if (dirp->dirEntryPosition >= dirp->directory->size / sizeof(DirectoryEntry)) {
-        return NULL;
-    }
+    exit(EXIT_SUCCESS);
 
     return dirp->di;
 }
@@ -567,7 +538,11 @@ int fs_move(char *srcPathName, char* destPathName) {
     // Get a free entry in DEST directory
     int vacantDE = findUnusedDE(ppiDest.parent);
     if (vacantDE == -1) {
-		ppiDest.parent = expandDirectory(ppiDest.parent);
+        // Acquire parent directory
+        char* result = secondToLastElement(destPathName);
+        int location = findNameInDir(ppiDest.previousDir, result);
+
+		ppiDest.parent = expandDirectory(ppiDest.parent, ppiDest.previousDir, &ppiDest.previousDir[location]);
         if (ppiDest.parent == NULL) {
             free(srcPath);
             free(destPath);

@@ -84,11 +84,20 @@ DirectoryEntry *initDirectory(int minEntries, DirectoryEntry *parent)
 
 /**
  * Expands an existing directory to create room for more directory entries.
+ * Note: Parameters might be a little bit messy but it is to ensure a way to update
+ * parent directory's size appropriately not just the "." size.
  * 
  * @param directory Pointer to the directory entry to be expanded.
+ * @param parentDir Represents the entire directory of where the parentDirectory is.
+ *                  For example: /car/car1 where we want to expand car to add car1, so
+ *                  "/" will be the "entire directory."
+ * @param parentDirLoc Represents the parent directory. From the previous example it will
+ *                      be "car" specifically.
  * @return Pointer to the initialized directory entries or NULL if the expansion failed.
 */
-DirectoryEntry* expandDirectory(DirectoryEntry* directory) {
+DirectoryEntry* expandDirectory(DirectoryEntry* directory, DirectoryEntry* parentDir,
+        DirectoryEntry* parentDirLoc) {
+
     int oldNumBlocks = (directory->size + vcb->blockSize - 1) / vcb->blockSize;
     int oldNumEntries = directory->size / sizeof(DirectoryEntry);
     
@@ -104,6 +113,33 @@ DirectoryEntry* expandDirectory(DirectoryEntry* directory) {
     memcpy(DEs, directory, directory->size);
     freeDirectory(directory);
     DEs[0].size *= 2;
+    if (parentDir == NULL) { // If root then update special ".." entry also
+        DEs[1].size *= 2;
+    }
+
+    // Critical! Update the parent's directory size if it is not the root.
+    // Important for fs_open & fs_read for 'ls'
+    if (parentDir != NULL) {
+        int parentNumOfBlocks = (parentDir->size + vcb->blockSize - 1) / vcb->blockSize;
+        int bytesToUpdate = parentNumOfBlocks * vcb->blockSize;
+
+        // Instantiate temp to hold parentDir for updating
+        DirectoryEntry* temp = malloc(bytesToUpdate);
+        if (temp == NULL) {
+            free(DEs);
+            return NULL;
+        }
+        parentDirLoc->size *= 2; // Note: different from parentDir which represent entire directory
+        memcpy(temp, parentDir, bytesToUpdate);
+
+        if (writeBlock(temp, parentNumOfBlocks, parentDir->location) == -1) {
+            free(temp);
+            free(DEs);
+            return NULL;
+        }
+
+        free(temp);
+    }
     
     time_t currentTime = time(NULL);
     // Initialize each directory entry to a known free state

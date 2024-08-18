@@ -54,8 +54,10 @@ struct fs_diriteminfo
 typedef struct
 	{
 	/*****TO DO:  Fill in this structure with what your open/read directory needs  *****/
-	unsigned short  d_reclen;		/* length of this record(amount of used entries) */
+	unsigned short  d_reclen;			/* length of this record(amount of used entries) */
 	unsigned short	dirEntryPosition;	/* which directory entry position, like file pos */
+	unsigned long	dirEntryLocation;	/* location of the first directory entry */
+	unsigned int	index;				/* index of the current directory */
 	DirectoryEntry *	directory;			/* Pointer to the loaded directory you want to iterate */
 	struct fs_diriteminfo * di;		/* Pointer to the structure you return from read */
 	} fdDir;

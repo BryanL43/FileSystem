@@ -39,7 +39,11 @@ typedef struct DirectoryEntry
 
 DirectoryEntry *initDirectory(int minEntries, DirectoryEntry *parent);
 
-DirectoryEntry* expandDirectory(DirectoryEntry* directory);
+DirectoryEntry* expandDirectory(
+   DirectoryEntry* directory,
+   DirectoryEntry* parentDir,
+   DirectoryEntry* parentDirLoc
+);
 
 void freeDirectory(DirectoryEntry* dir);
 

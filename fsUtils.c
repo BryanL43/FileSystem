@@ -259,6 +259,7 @@ int parsePath(char* path, ppInfo* ppi) {
     char* token1 = strtok_r(mutablePath, "/", &saveptr);
     if (token1 == NULL) { // Special case "/" only
         ppi->parent = parent;
+        ppi->previousDir = NULL;
         ppi->lastElement = NULL;
         ppi->lastElementIndex = -2; // special sentinel
         free(mutablePath);
@@ -267,6 +268,7 @@ int parsePath(char* path, ppInfo* ppi) {
     }
 
     // Iterates through the path until it reaches the end or any error occurs
+    DirectoryEntry* prevDir = NULL;
     char* token2;
     do {
         ppi->lastElement = token1;
@@ -276,6 +278,7 @@ int parsePath(char* path, ppInfo* ppi) {
         token2 = strtok_r(NULL, "/", &saveptr);
         if (token2 == NULL) {
             ppi->parent = currentDir;
+            ppi->previousDir = prevDir;
             return 0;
         }
 
@@ -300,9 +303,10 @@ int parsePath(char* path, ppInfo* ppi) {
             freeDirectory(currentDir);
             return -1;
         }
-        freeDirectory(currentDir);
+        // freeDirectory(prevDir);
 
         // Set the current directory to the subdirectory
+        prevDir = currentDir;
         currentDir = temp;
         token1 = token2;
     } while (token2 != NULL);
@@ -358,7 +362,11 @@ int createFile(ppInfo* ppi) {
     // Find first available directory entry or expand if all space is occupied
     int vacantDE = findUnusedDE(ppi->parent);
     if (vacantDE == -1) {
-		ppi->parent = expandDirectory(ppi->parent);
+        // Acquire parent directory
+        // char* result = secondToLastElement(pathname);
+        // int location = findNameInDir(ppi.previousDir, result);
+
+		ppi->parent = expandDirectory(ppi->parent, ppi->parent, ppi->parent);
         if (ppi->parent == NULL) {
             return -1;
         }
@@ -398,4 +406,41 @@ void updateWorkingDir(ppInfo ppi) {
     else if (ppi.parent->location == root->location) {
         root = ppi.parent;
     }
+}
+
+/**
+ * Acquire the second to last element of a given path.
+ * Result should be freed when finished using.
+ * 
+ * @param path the given full path.
+ * @return the second to last element of the path or NULL on failure.
+*/
+char* secondToLastElement(const char* path) {
+    if (path == NULL) {
+        return NULL;
+    }
+
+    // Make a mutable copy of the path
+    char* mutablePath = strdup(path);
+    if (mutablePath == NULL) {
+        return NULL;
+    }
+
+    char* lastElement = NULL;
+    char* secondToLast = NULL;
+
+    char* token = strtok(mutablePath, "/");
+    while (token != NULL) {
+        secondToLast = lastElement;
+        lastElement = token;
+        token = strtok(NULL, "/");
+    }
+
+    char* result = NULL;
+    if (secondToLast != NULL) {
+        result = strdup(secondToLast);
+    }
+
+    free(mutablePath);
+    return result;
 }

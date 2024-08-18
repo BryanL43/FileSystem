@@ -27,5 +27,6 @@ int parsePath(char* path, ppInfo* ppi);
 int deleteBlob(ppInfo ppi);
 int createFile(ppInfo* ppi);
 void updateWorkingDir(ppInfo ppi);
+char* secondToLastElement(const char* path);
 
 #endif
