@@ -123,10 +123,10 @@ int fs_mkdir(const char *pathname, mode_t mode) {
         free(mutablePath);
         return -1;
     }
+    free(mutablePath);
 
     DirectoryEntry* temp = loadDir(ppi.parent);
     if (temp == NULL) {
-        free(mutablePath);
         return -1;
     }
     ppi.parent = temp;
@@ -140,7 +140,6 @@ int fs_mkdir(const char *pathname, mode_t mode) {
         
         ppi.parent = expandDirectory(ppi.parent, ppi.previousDir, &ppi.previousDir[location]);
         if (ppi.parent == NULL) {
-            free(mutablePath);
             freeDirectory(temp);
             return -1;
         }
@@ -148,13 +147,11 @@ int fs_mkdir(const char *pathname, mode_t mode) {
     }
 
     if (vacantDE < 0) {
-        free(mutablePath);
         freeDirectory(ppi.parent);
         return -1;
     }
 
     if (ppi.lastElementIndex != -1) { // directory already exists
-        free(mutablePath);
         freeDirectory(ppi.parent);
         return -2;
     }
@@ -162,7 +159,6 @@ int fs_mkdir(const char *pathname, mode_t mode) {
     // Instantiate an directory instance
     DirectoryEntry* newDir = initDirectory(DEFAULT_DIR_SIZE, ppi.parent);
     if (newDir == NULL) {
-        free(mutablePath);
         freeDirectory(ppi.parent);
         return -1;
     }
@@ -174,7 +170,6 @@ int fs_mkdir(const char *pathname, mode_t mode) {
     // Write the new directory to disk
     int parentNumOfBlocks = (ppi.parent->size + vcb->blockSize - 1) / vcb->blockSize;
     if (writeBlock(ppi.parent, parentNumOfBlocks, ppi.parent->location) == -1) {
-        free(mutablePath);
         free(newDir);
         freeDirectory(ppi.parent);
     }
@@ -183,7 +178,6 @@ int fs_mkdir(const char *pathname, mode_t mode) {
 
     freeDirectory(ppi.parent);
     freeDirectory(newDir);
-    free(mutablePath);
 
     return 0;
 }
@@ -291,10 +285,10 @@ fdDir * fs_opendir(const char *pathname) {
         freeDirectory(ppi.parent);
         return NULL;
     }
+    free(path);
 
     DirectoryEntry* temp = loadDir(ppi.parent);
     if (temp == NULL) {
-        free(path);
         freeDirectory(ppi.parent);
     }
     ppi.parent = temp;
@@ -307,7 +301,6 @@ fdDir * fs_opendir(const char *pathname) {
 
     fdDir* dirp = malloc(sizeof(fdDir));
     if (dirp == NULL) {
-        free(path);
         freeDirectory(ppi.parent);
         return NULL;
     }
@@ -319,7 +312,6 @@ fdDir * fs_opendir(const char *pathname) {
 
     dirp->di = malloc(sizeof(struct fs_diriteminfo));
     if (dirp->di == NULL) {
-        free(path);
         free(dirp);
         freeDirectory(ppi.parent);
         return NULL;
@@ -334,9 +326,7 @@ fdDir * fs_opendir(const char *pathname) {
         strcpy(dirp->di->d_name, ppi.lastElement);
     }
     
-    free(path);
     freeDirectory(ppi.parent);
-
     return dirp;
 }
 
@@ -417,10 +407,10 @@ int fs_delete(char* filename) {
         free(path);
         return -1;
     }
+    free(path);
 
     // Deleting the file without touching directory
-    if(deleteBlob(ppi) == -1) {
-        free(path);
+    if (deleteBlob(ppi) == -1) {
         return -1;
     }
     
@@ -433,12 +423,10 @@ int fs_delete(char* filename) {
     // Write the new parent directory with deleted file into disk
     int sizeOfParentDir = (ppi.parent[0].size + vcb->blockSize - 1) / vcb->blockSize;
     if (writeBlock(ppi.parent, sizeOfParentDir, ppi.parent[0].location) == -1) {
-        free(path);
         return -1;
     }
 
     freeDirectory(ppi.parent);
-    free(path);
     return 0;
 }
 
@@ -463,13 +451,13 @@ int fs_rmdir(const char *pathname) {
         free(path);
         return -1;
     }
+    free(path);
 
     // Loading ppInfo into variables
     int index = ppi.lastElementIndex;
     int locationOfDir = ppi.parent[index].location;
     int sizeOfDir = (ppi.parent[index].size + vcb->blockSize - 1) / vcb->blockSize;
     if (index < 0 || locationOfDir < 0 || sizeOfDir < 0) {
-        free(path);
         freeDirectory(ppi.parent);
         return -1;
     }
@@ -477,13 +465,11 @@ int fs_rmdir(const char *pathname) {
     // Load directory for empty check
     DirectoryEntry* directoryToDelete = loadDir(&(ppi.parent[ppi.lastElementIndex]));
     if (directoryToDelete == NULL) {
-        free(path);
         freeDirectory(ppi.parent);
     }
 
     if(isDirEmpty(directoryToDelete) == -1) {
         // When the directory is not empty, return error
-        free(path);
         free(directoryToDelete);
         freeDirectory(ppi.parent);
         return -1;
@@ -498,7 +484,6 @@ int fs_rmdir(const char *pathname) {
         // Traverse the FAT until it reaches the sentinel value
         int endOfDirIndex = seekBlock(sizeOfDir - 1, locationOfDir);
         if (endOfDirIndex < 0) {
-            free(path);
             free(directoryToDelete);
             freeDirectory(ppi.parent);
             return -1;
@@ -510,7 +495,6 @@ int fs_rmdir(const char *pathname) {
     
     // Write updated FAT to disk
     if (writeBlock(FAT, vcb->freeSpaceSize, vcb->freeSpaceLocation) == -1) {
-        free(path);
         free(directoryToDelete);
         freeDirectory(ppi.parent);
         return -1;
@@ -522,7 +506,6 @@ int fs_rmdir(const char *pathname) {
     // Write the new parent directory with deleted directory into disk
     int sizeOfDirectory = (ppi.parent[0].size + vcb->blockSize - 1) / vcb->blockSize;
     if (writeBlock(ppi.parent, sizeOfDirectory, ppi.parent[0].location) == -1) {
-        free(path);
         free(directoryToDelete);
         freeDirectory(ppi.parent);
         return -1;
@@ -530,8 +513,6 @@ int fs_rmdir(const char *pathname) {
 
     free(directoryToDelete);
     freeDirectory(ppi.parent);
-    free(path);
-
     return 0;
 }
 
@@ -564,6 +545,7 @@ int fs_move(char *srcPathName, char* destPathName) {
         free(destPath);
         return -1;
     }
+    free(srcPath);
 
     if (parsePath(destPath, &ppiDest) == -1) {
         free(srcPath);
@@ -571,6 +553,7 @@ int fs_move(char *srcPathName, char* destPathName) {
         freeDirectory(ppiSrc.parent);
         return -1;
     }
+    free(destPath);
 
     // Get a free entry in DEST directory
     int vacantDE = findUnusedDE(ppiDest.parent);
@@ -581,8 +564,6 @@ int fs_move(char *srcPathName, char* destPathName) {
 
 		ppiDest.parent = expandDirectory(ppiDest.parent, ppiDest.previousDir, &ppiDest.previousDir[location]);
         if (ppiDest.parent == NULL) {
-            free(srcPath);
-            free(destPath);
             freeDirectory(ppiSrc.parent);
             return -1;
         }
@@ -614,24 +595,18 @@ int fs_move(char *srcPathName, char* destPathName) {
         ppiDest.parent[srcElementIndex].size = 0;
         ppiDest.parent[srcElementIndex].location = -1;
         if (writeBlock(ppiDest.parent, sizeOfDestDirectory, ppiDest.parent->location) == -1) {
-            free(srcPath);
-            free(destPath);
             freeDirectory(ppiSrc.parent);
             freeDirectory(ppiDest.parent);
             return -1;
         }
     } else { // Normal operation when moving in different directories
         if (writeBlock(ppiDest.parent, sizeOfDestDirectory, ppiDest.parent->location) == -1) {
-            free(srcPath);
-            free(destPath);
             freeDirectory(ppiSrc.parent);
             freeDirectory(ppiDest.parent);
             return -1;
         }
 
         if (writeBlock(ppiSrc.parent, sizeOfSrcDirectory, ppiSrc.parent->location) == -1) {
-            free(srcPath);
-            free(destPath);
             freeDirectory(ppiSrc.parent);
             freeDirectory(ppiDest.parent);
             return -1;
@@ -640,8 +615,6 @@ int fs_move(char *srcPathName, char* destPathName) {
     updateWorkingDir(ppiDest);
     updateWorkingDir(ppiSrc);
 
-    free(srcPath);
-    free(destPath);
     freeDirectory(ppiSrc.parent);
     freeDirectory(ppiDest.parent);
 
