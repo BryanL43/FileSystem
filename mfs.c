@@ -125,6 +125,10 @@ int fs_mkdir(const char *pathname, mode_t mode) {
     }
 
     DirectoryEntry* temp = loadDir(ppi.parent);
+    if (temp == NULL) {
+        free(mutablePath);
+        return -1;
+    }
     ppi.parent = temp;
 
     // Find unused directory entry
@@ -245,7 +249,7 @@ int fs_isDir(char* path)
 /**
  * Checks if the given path is a file.
  * 
- * @param path the specified path.-            0
+ * @param path the specified path.
  * @return 1 if the directory entry at the given path is a file, 0 otherwise.
  */
 int fs_isFile(char* path) {
@@ -289,6 +293,10 @@ fdDir * fs_opendir(const char *pathname) {
     }
 
     DirectoryEntry* temp = loadDir(ppi.parent);
+    if (temp == NULL) {
+        free(path);
+        freeDirectory(ppi.parent);
+    }
     ppi.parent = temp;
 
     if (ppi.lastElementIndex == ROOT) {
