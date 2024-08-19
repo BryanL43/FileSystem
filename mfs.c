@@ -203,7 +203,7 @@ int fs_stat(const char *path, struct fs_stat *buf) {
     // Parse the path
     int ret = parsePath(mutablePath, &ppi);
     free(mutablePath);
-    if (ret == -1) {
+    if (ret == -1 || ppi.lastElementIndex < 0) {
         return -1;
     }
 
@@ -245,7 +245,7 @@ int fs_isDir(char* path)
 /**
  * Checks if the given path is a file.
  * 
- * @param path the specified path.
+ * @param path the specified path.-            0
  * @return 1 if the directory entry at the given path is a file, 0 otherwise.
  */
 int fs_isFile(char* path) {
@@ -273,7 +273,7 @@ int fs_isFile(char* path) {
  * @return fdDir structure
  */
 fdDir * fs_opendir(const char *pathname) {
-    ppInfo ppi;
+    ppInfo ppi;   
 
     // Make a mutable copy of the pathname (discards const warning issue)
     char* path = strdup(pathname);
@@ -288,8 +288,14 @@ fdDir * fs_opendir(const char *pathname) {
         return NULL;
     }
 
+    DirectoryEntry* temp = loadDir(ppi.parent);
+    ppi.parent = temp;
+
+    if (ppi.lastElementIndex == ROOT) {
+        ppi.lastElementIndex = 0;
+    }
+
     DirectoryEntry entry = ppi.parent[ppi.lastElementIndex];
-    printf("Entry.size: %d\n", ppi.parent[ppi.lastElementIndex].size);
 
     fdDir* dirp = malloc(sizeof(fdDir));
     if (dirp == NULL) {
@@ -313,7 +319,12 @@ fdDir * fs_opendir(const char *pathname) {
 
     dirp->di->d_reclen = (entry.size + vcb->blockSize - 1) / vcb->blockSize;
     dirp->di->fileType = entry.isDirectory;
-    strcpy(dirp->di->d_name, ppi.lastElement);
+
+    if (ppi.lastElement == NULL) {
+        strcpy(dirp->di->d_name, ".");
+    } else {
+        strcpy(dirp->di->d_name, ppi.lastElement);
+    }
     
     free(path);
     freeDirectory(ppi.parent);
@@ -325,11 +336,14 @@ fdDir * fs_opendir(const char *pathname) {
  * Closes a directory.
  * 
  * @param dirp the directory's descriptor.
- * @return 1 on success.
+ * @return 1 on success or 0 on failure.
 */
 int fs_closedir(fdDir *dirp)
 {
-    freeDirectory(dirp->directory);
+    if (dirp == NULL) {
+        return 0;
+    }
+
     free(dirp->di);
 	free(dirp);
 
@@ -345,18 +359,33 @@ int fs_closedir(fdDir *dirp)
  * @return fs_diriteminfo with metadata about each file in the directory or NULL if error.
  */
 struct fs_diriteminfo *fs_readdir(fdDir *dirp) {
-    printf("Number od entries: %d\n", dirp->d_reclen);
-    // DirectoryEntry* entries = malloc(dirp->d_reclen * vcb->blockSize);
+    DirectoryEntry* entries = malloc(dirp->d_reclen * vcb->blockSize);
+    if (entries == NULL) {
+        return NULL;
+    }
+    
+    if (readBlock(entries, dirp->d_reclen, dirp->dirEntryLocation) == -1) {
+        free(entries);
+        return NULL;
+    }
 
-    // if (readBlock(entries, dirp->d_reclen, dirp->dirEntryLocation) == -1) {
-    //     free(entries);
-    //     return NULL;
-    // }
+    DirectoryEntry entry = entries[dirp->index];
+    int numOfPredictedEntries = (dirp->d_reclen * vcb->blockSize) / sizeof(struct DirectoryEntry);
+    while (dirp->index < numOfPredictedEntries && entry.location == -1) {
+        entry = entries[dirp->index++];
+    }
 
-    //unsigned short pos = dirp->dirEntryPosition;
+    if (dirp->index == numOfPredictedEntries) {
+        free(entries);
+        return NULL;
+    }
 
-    exit(EXIT_SUCCESS);
+    dirp->di->d_reclen = dirp->d_reclen;
+    dirp->di->fileType = entry.isDirectory;
+    strcpy(dirp->di->d_name, entry.name);
+    dirp->index++;
 
+    free(entries);
     return dirp->di;
 }
 
