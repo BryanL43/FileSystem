@@ -244,6 +244,8 @@ int parsePath(char* path, ppInfo* ppi) {
     DirectoryEntry* parent;
     if (path[0] == '/') {
         parent = root;
+    } else if (strcmp(path, "..") == 0) {
+        parent = &cwd[1];
     } else {
         parent = cwd;
     }

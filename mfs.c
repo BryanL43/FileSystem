@@ -206,7 +206,7 @@ int fs_stat(const char *path, struct fs_stat *buf) {
     // Parse the path
     int ret = parsePath(mutablePath, &ppi);
     free(mutablePath);
-    if (ret == -1 || ppi.lastElementIndex < 0) {
+    if (ret == -1 || ppi.lastElementIndex == -1) {
         return -1;
     }
 
