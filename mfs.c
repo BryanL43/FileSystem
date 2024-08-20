@@ -44,8 +44,13 @@ int fs_setcwd(char *pathname) {
         return 0;
     }
 
-    // Loads the directory into memory
-    DirectoryEntry* temp = loadDir(&(ppi.parent[ppi.lastElementIndex]));
+    // Handle ".." case (moving to parent directory)
+    DirectoryEntry* temp;
+    if (strcmp(ppi.parent[ppi.lastElementIndex].name, "..") == 0) {
+        temp = loadDir(&(ppi.parent[ppi.lastElementIndex - 1])); // Load the grandparent
+    } else { // Normal case, moving to a non-root parent directory
+        temp = loadDir(&(ppi.parent[ppi.lastElementIndex]));
+    }
     if (temp == NULL) {
         return -1;
     }
@@ -86,7 +91,7 @@ int fs_setcwd(char *pathname) {
     }
 
     freeDirectory(temp);
-
+    updateWorkingDir(ppi);
     return 0;
 }
 
