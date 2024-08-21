@@ -295,29 +295,34 @@ fdDir * fs_opendir(const char *pathname) {
     }
     free(path);
 
+    // Load the parent directory into memory
     DirectoryEntry* temp = loadDir(ppi.parent);
     if (temp == NULL) {
         freeDirectory(ppi.parent);
     }
     ppi.parent = temp;
 
+    // Special root case where index should refer to "." entry
     if (ppi.lastElementIndex == ROOT) {
         ppi.lastElementIndex = 0;
     }
 
     DirectoryEntry entry = ppi.parent[ppi.lastElementIndex];
 
+    // Instantiate fdDir structure
     fdDir* dirp = malloc(sizeof(fdDir));
     if (dirp == NULL) {
         freeDirectory(ppi.parent);
         return NULL;
     }
 
+    // Populate fdDir structure with information regarding the directory to open
     dirp->d_reclen = (entry.size + vcb->blockSize - 1) / vcb->blockSize;
     dirp->dirEntryPosition = ppi.lastElementIndex;
     dirp->dirEntryLocation = entry.location;
     dirp->index = 0;
 
+    // Instantiate the directory item information structure
     dirp->di = malloc(sizeof(struct fs_diriteminfo));
     if (dirp->di == NULL) {
         free(dirp);
@@ -325,9 +330,11 @@ fdDir * fs_opendir(const char *pathname) {
         return NULL;
     }
 
+    // Populate the directory item information structure with entry information
     dirp->di->d_reclen = (entry.size + vcb->blockSize - 1) / vcb->blockSize;
     dirp->di->fileType = entry.isDirectory;
 
+    // Copy the appropriate directory's name
     if (ppi.lastElement == NULL) {
         strcpy(dirp->di->d_name, ".");
     } else {
@@ -365,27 +372,32 @@ int fs_closedir(fdDir *dirp)
  * @return fs_diriteminfo with metadata about each file in the directory or NULL if error.
  */
 struct fs_diriteminfo *fs_readdir(fdDir *dirp) {
+    // Instantiate the directory that is opened
     DirectoryEntry* entries = malloc(dirp->d_reclen * vcb->blockSize);
     if (entries == NULL) {
         return NULL;
     }
     
+    // Load the directory into memory
     if (readBlock(entries, dirp->d_reclen, dirp->dirEntryLocation) == -1) {
         free(entries);
         return NULL;
     }
 
+    // Iterate through the entries and find the next valid directory entry
     DirectoryEntry entry = entries[dirp->index];
     int numOfPredictedEntries = (dirp->d_reclen * vcb->blockSize) / sizeof(struct DirectoryEntry);
     while (dirp->index < numOfPredictedEntries && entry.location == -1) {
         entry = entries[dirp->index++];
     }
 
+    // Check if we have iterated through the entire entry
     if (dirp->index == numOfPredictedEntries) {
         free(entries);
         return NULL;
     }
 
+    // Populate directory item information structure with the entry's information
     dirp->di->d_reclen = dirp->d_reclen;
     dirp->di->fileType = entry.isDirectory;
     strcpy(dirp->di->d_name, entry.name);
@@ -478,6 +490,7 @@ int fs_rmdir(const char *pathname) {
 
     if(isDirEmpty(directoryToDelete) == -1) {
         // When the directory is not empty, return error
+        printf("Failed to remove directory! Directory is not empty.\n");
         free(directoryToDelete);
         freeDirectory(ppi.parent);
         return -1;
