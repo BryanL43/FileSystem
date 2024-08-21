@@ -227,8 +227,7 @@ int fs_stat(const char *path, struct fs_stat *buf) {
  * @param path the specified path.
  * @return 1 if Directory. On error or not Directory, 0 is returned. 
  */
-int fs_isDir(char* path) 
-{
+int fs_isDir(char* path) {
     ppInfo ppi;
 
     if (parsePath(path, &ppi) != 0) {
@@ -244,6 +243,10 @@ int fs_isDir(char* path)
     freeDirectory(ppi.parent);
     return 0;
 }
+// Warning: Since 'ls' calls fs_isDir with 1st a path then the individual name,
+// there isn't a way to get the 'ls' to accurate display information when calling
+// through a path. i.e. ls -la /car/car1
+// Unless the fs_shell is reconstructed, then the aforementioned issue will be resolved.
 
 /**
  * Checks if the given path is a file.
