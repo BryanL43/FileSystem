@@ -299,6 +299,7 @@ fdDir * fs_opendir(const char *pathname) {
     DirectoryEntry* temp = loadDir(ppi.parent);
     if (temp == NULL) {
         freeDirectory(ppi.parent);
+        return NULL;
     }
     ppi.parent = temp;
 
@@ -549,7 +550,7 @@ int fs_move(char *srcPathName, char* destPathName) {
     ppInfo ppiSrc;
     ppInfo ppiDest;
 
-    // Make a mutable copy of the pathname (discards const warning issue)
+    // Make a mutable copy of the pathnames (discards const warning issue)
     char* srcPath = strdup(srcPathName);
     if (srcPath == NULL) {
         return -1;
@@ -560,24 +561,79 @@ int fs_move(char *srcPathName, char* destPathName) {
         return -1;
     }
 
-    // Get PPI of both SRC and DEST paths
     if (parsePath(srcPath, &ppiSrc) == -1) {
         free(srcPath);
         free(destPath);
         return -1;
     }
-    free(srcPath);
+
+    // Ensure valid srcPath ("." & ".." causes a mess so restrict usage)
+    if (ppiSrc.lastElementIndex < 0 ||
+            strcmp(srcPathName, ".") == 0 || strcmp(srcPathName, "..") == 0) {
+        printf("ERROR: invalid source path!\n");
+        free(srcPath);
+        free(destPath);
+        free(ppiSrc.parent);
+        return -1;
+    }
 
     if (parsePath(destPath, &ppiDest) == -1) {
-        free(srcPath);
         free(destPath);
         freeDirectory(ppiSrc.parent);
         return -1;
     }
+
+    // Special case, moving into root
+    if (ppiDest.lastElementIndex == ROOT) {
+        ppiDest.lastElementIndex = 0;
+    }
+
+    // Ensure valid destPath ("." & ".." causes a mess so restrict usage)
+    if (ppiDest.lastElementIndex < 0 ||
+            strcmp(destPathName, ".") == 0 || strcmp(destPathName, "..") == 0) {
+        printf("ERROR: invalid destination path!\n");
+        free(destPath);
+        freeDirectory(ppiSrc.parent);
+        freeDirectory(ppiDest.parent);
+        return -1;
+    }
     free(destPath);
 
+    // Instantiate a new string for srcPath
+    char* resolvedSrcPath = malloc(strlen(srcPath) + 1);
+    if (resolvedSrcPath == NULL) {
+        free(srcPath);
+        freeDirectory(ppiSrc.parent);
+        freeDirectory(ppiDest.parent);
+        return -1;
+    }
+
+    // Append '/' to end of srcPath
+    strcpy(resolvedSrcPath, srcPath);
+    strcat(resolvedSrcPath, "/");
+    free(srcPath);
+
+    // Change directory if we are moving the directory we are currently in
+    if (strcmp(cwdPathName, resolvedSrcPath) == 0) {
+        if (fs_setcwd(destPathName) == -1) {
+            free(resolvedSrcPath);
+            freeDirectory(ppiSrc.parent);
+            freeDirectory(ppiDest.parent);
+            return -1;
+        }
+    }
+    free(resolvedSrcPath);
+
+    // Load the destination directory into memory
+    DirectoryEntry* destDir = loadDir(&ppiDest.parent[ppiDest.lastElementIndex]);
+    if (destDir == NULL) {
+        freeDirectory(ppiSrc.parent);
+        freeDirectory(ppiDest.parent);
+        return -1;
+    }
+
     // Get a free entry in DEST directory
-    int vacantDE = findUnusedDE(ppiDest.parent);
+    int vacantDE = findUnusedDE(destDir);
     if (vacantDE == -1) {
         // Acquire parent directory
         char* result = secondToLastElement(destPathName);
@@ -586,6 +642,7 @@ int fs_move(char *srcPathName, char* destPathName) {
 		ppiDest.parent = expandDirectory(ppiDest.parent, ppiDest.previousDir, &ppiDest.previousDir[location]);
         if (ppiDest.parent == NULL) {
             freeDirectory(ppiSrc.parent);
+            freeDirectory(destDir);
             return -1;
         }
 		vacantDE = findUnusedDE(ppiDest.parent);
@@ -597,47 +654,37 @@ int fs_move(char *srcPathName, char* destPathName) {
 
     // Copying SRC entry into DEST entry
     char name[sizeof(((DirectoryEntry*)0)->name)];
-    memcpy(name, ppiDest.lastElement, sizeof(name));
-    memcpy(&ppiDest.parent[vacantDE], &ppiSrc.parent[srcElementIndex], sizeof(DirectoryEntry));
-    memcpy(&ppiDest.parent[vacantDE].name, name, sizeof(name));
-    ppiDest.parent[srcElementIndex].dateModified = currentTime;
+    memcpy(name, ppiSrc.lastElement, sizeof(name));
+    memcpy(&destDir[vacantDE], &ppiSrc.parent[srcElementIndex], sizeof(DirectoryEntry));
+    memcpy(&destDir[vacantDE].name, name, sizeof(name));
+    destDir[vacantDE].dateModified = currentTime;
 
     // Deleting entry in SRC entry
     ppiSrc.parent[srcElementIndex].size = 0;
     ppiSrc.parent[srcElementIndex].location = -1;
 
-    int sizeOfDestDirectory = (ppiDest.parent->size + vcb->blockSize - 1) / vcb->blockSize;
+    int sizeOfDestDirectory = (destDir->size + vcb->blockSize - 1) / vcb->blockSize;
     int sizeOfSrcDirectory = (ppiSrc.parent->size + vcb->blockSize - 1) / vcb->blockSize;
 
-    // When moving in the same directory
-    if (ppiDest.parent->location == ppiSrc.parent->location) {
+    // Update the destination directory with the newly moved entry
+    if (writeBlock(destDir, sizeOfDestDirectory, destDir->location) == -1) {
+        freeDirectory(ppiSrc.parent);
+        freeDirectory(destDir);
+        return -1;
+    }
 
-        // Set DEST directory of SRC file
-        ppiDest.parent[srcElementIndex].size = 0;
-        ppiDest.parent[srcElementIndex].location = -1;
-        if (writeBlock(ppiDest.parent, sizeOfDestDirectory, ppiDest.parent->location) == -1) {
-            freeDirectory(ppiSrc.parent);
-            freeDirectory(ppiDest.parent);
-            return -1;
-        }
-    } else { // Normal operation when moving in different directories
-        if (writeBlock(ppiDest.parent, sizeOfDestDirectory, ppiDest.parent->location) == -1) {
-            freeDirectory(ppiSrc.parent);
-            freeDirectory(ppiDest.parent);
-            return -1;
-        }
+    // Update the source directory with the entry moved out
+    if (writeBlock(ppiSrc.parent, sizeOfSrcDirectory, ppiSrc.parent->location) == -1) {
+        freeDirectory(ppiSrc.parent);
+        freeDirectory(destDir);
+        return -1;
+    }
 
-        if (writeBlock(ppiSrc.parent, sizeOfSrcDirectory, ppiSrc.parent->location) == -1) {
-            freeDirectory(ppiSrc.parent);
-            freeDirectory(ppiDest.parent);
-            return -1;
-        }
-    }   
     updateWorkingDir(ppiDest);
     updateWorkingDir(ppiSrc);
 
     freeDirectory(ppiSrc.parent);
+    freeDirectory(destDir);
     freeDirectory(ppiDest.parent);
-
     return 0;
 }
