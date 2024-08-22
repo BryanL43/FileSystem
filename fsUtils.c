@@ -305,7 +305,6 @@ int parsePath(char* path, ppInfo* ppi) {
             freeDirectory(currentDir);
             return -1;
         }
-        // freeDirectory(prevDir);
 
         // Set the current directory to the subdirectory
         prevDir = currentDir;
@@ -358,22 +357,23 @@ int deleteBlob(ppInfo ppi) {
  * @param ppi parse pass info needed to create the new file.
  * @return 0 on success or -1 on failure.
 */
-int createFile(ppInfo* ppi) {
+int createFile(ppInfo* ppi, char* path) {
     time_t currentTime = time(NULL);
 
     // Find first available directory entry or expand if all space is occupied
     int vacantDE = findUnusedDE(ppi->parent);
     if (vacantDE == -1) {
         // Acquire parent directory
-        // char* result = secondToLastElement(pathname);
-        // int location = findNameInDir(ppi.previousDir, result);
+        char* result = secondToLastElement(path);
+        int location = findNameInDir(ppi->previousDir, result);
 
-		ppi->parent = expandDirectory(ppi->parent, ppi->parent, ppi->parent);
+		ppi->parent = expandDirectory(ppi->parent, ppi->previousDir, &ppi->previousDir[location]);
         if (ppi->parent == NULL) {
             return -1;
         }
 		vacantDE = findUnusedDE(ppi->parent);
 	}
+
     if (vacantDE < 0) {
         return -1;
     }
@@ -411,7 +411,7 @@ void updateWorkingDir(ppInfo ppi) {
 }
 
 /**
- * Acquire the second to last element of a given path.
+ * Acquire the second to last element of a given path. i.e. /car/car2 where "car" is returned.
  * Result should be freed when finished using.
  * 
  * @param path the given full path.
@@ -431,6 +431,7 @@ char* secondToLastElement(const char* path) {
     char* lastElement = NULL;
     char* secondToLast = NULL;
 
+    // Traverse the path and repeatedly acquiring previous element and next element
     char* token = strtok(mutablePath, "/");
     while (token != NULL) {
         secondToLast = lastElement;
@@ -438,6 +439,7 @@ char* secondToLastElement(const char* path) {
         token = strtok(NULL, "/");
     }
 
+    // Create result string to return
     char* result = NULL;
     if (secondToLast != NULL) {
         result = strdup(secondToLast);

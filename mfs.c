@@ -648,6 +648,12 @@ int fs_move(char *srcPathName, char* destPathName) {
 		vacantDE = findUnusedDE(ppiDest.parent);
 	}
 
+    if (vacantDE < 0) {
+        freeDirectory(ppiSrc.parent);
+        freeDirectory(destDir);
+        return -1;
+    }
+
     // Store corresponding index to access PPI
     int srcElementIndex = ppiSrc.lastElementIndex;
     int destElementIndex = vacantDE;

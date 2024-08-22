@@ -106,7 +106,7 @@ b_io_fd b_open(char* filename, int flags) {
 
 	// Create a file if it doesn't exist
 	if (ppi.lastElementIndex == -1 && flags & O_CREAT) {
-		if (createFile(&ppi) == -1) {
+		if (createFile(&ppi, filename) == -1) {
 			return -1;
 		}
 		fcb.fileIndex = ppi.lastElementIndex;

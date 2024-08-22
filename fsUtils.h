@@ -25,7 +25,7 @@ int findNameInDir(DirectoryEntry* directory, char* name);
 int isDirEmpty(DirectoryEntry* directory);
 int parsePath(char* path, ppInfo* ppi);
 int deleteBlob(ppInfo ppi);
-int createFile(ppInfo* ppi);
+int createFile(ppInfo* ppi, char* path);
 void updateWorkingDir(ppInfo ppi);
 char* secondToLastElement(const char* path);
 

@@ -90,7 +90,7 @@ DirectoryEntry *initDirectory(int minEntries, DirectoryEntry *parent)
  * @param directory Pointer to the directory entry to be expanded.
  * @param parentDir Represents the entire directory of where the parentDirectory is.
  *                  For example: /car/car1 where we want to expand car to add car1, so
- *                  "/" will be the "entire directory."
+ *                  "/" will be the "entire directory" that houses car.
  * @param parentDirLoc Represents the parent directory. From the previous example it will
  *                      be "car" specifically.
  * @return Pointer to the initialized directory entries or NULL if the expansion failed.
@@ -110,6 +110,8 @@ DirectoryEntry* expandDirectory(DirectoryEntry* directory, DirectoryEntry* paren
     if (DEs == NULL) {
         return NULL;
     }
+
+    // Copy existing entries into the expanded directory
     memcpy(DEs, directory, directory->size);
     freeDirectory(directory);
     DEs[0].size *= 2;
